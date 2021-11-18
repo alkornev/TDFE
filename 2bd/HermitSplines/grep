@@ -1,0 +1,160 @@
+Unknown vendor: "gfortran"
+running build
+running config_cc
+unifing config_cc, config, build_clib, build_ext, build commands --compiler options
+running config_fc
+unifing config_fc, config, build_clib, build_ext, build commands --fcompiler options
+running build_src
+build_src
+building extension "HermitSplines" sources
+f2py options: []
+f2py:> /tmp/tmpmgzWKP/src.linux-x86_64-2.7/HermitSplinesmodule.c
+creating /tmp/tmpmgzWKP/src.linux-x86_64-2.7
+Reading fortran codes...
+	Reading file 'HermitSplines.f90' (format:free)
+Post-processing...
+	Block: HermitSplines
+			Block: hermitsplines
+				Block: initdiscretization
+				Block: setbounds
+				Block: resetgrid
+				Block: setcolloc
+				Block: hsplinebc
+				Block: hsplinebc1
+				Block: hsplinebc2
+				Block: hspline
+				Block: hspline1
+				Block: hspline2
+				Block: phi
+				Block: psi
+				Block: chi
+				Block: phi1
+				Block: psi1
+				Block: chi1
+				Block: phi2
+				Block: psi2
+{}
+In: :HermitSplines:HermitSplines.f90:hermitsplines:chi2
+vars2fortran: No typespec for argument "x".
+{}
+In: :HermitSplines:HermitSplines.f90:hermitsplines:chi2
+vars2fortran: No typespec for argument "x1i".
+{}
+In: :HermitSplines:HermitSplines.f90:hermitsplines:chi2
+vars2fortran: No typespec for argument "xi".
+{}
+In: :HermitSplines:HermitSplines.f90:hermitsplines:chi2
+vars2fortran: No typespec for argument "xi1".
+				Block: chi2
+				Block: locat
+Post-processing (stage 2)...
+	Block: HermitSplines
+		Block: unknown_interface
+			Block: hermitsplines
+				Block: initdiscretization
+				Block: setbounds
+				Block: resetgrid
+				Block: setcolloc
+				Block: hsplinebc
+				Block: hsplinebc1
+				Block: hsplinebc2
+				Block: hspline
+				Block: hspline1
+				Block: hspline2
+				Block: phi
+				Block: psi
+				Block: chi
+				Block: phi1
+				Block: psi1
+				Block: chi1
+				Block: phi2
+				Block: psi2
+				Block: chi2
+				Block: locat
+Building modules...
+	Building module "HermitSplines"...
+		Constructing F90 module support for "hermitsplines"...
+		  Variables: ncx xl rightbounds ifallocated xg bcright xgc nx bcleft leftbounds xr splinetype
+getarrdims:warning: assumed shape array, using 0 instead of ':'
+getarrdims:warning: assumed shape array, using 0 instead of ':'
+getarrdims:warning: assumed shape array, using 0 instead of ':'
+getarrdims:warning: assumed shape array, using 0 instead of ':'
+			Constructing wrapper function "hermitsplines.initdiscretization"...
+			  initdiscretization(grid,ibcleft,ibcright,isplinetype,[npoints])
+			Constructing wrapper function "hermitsplines.setbounds"...
+			  setbounds()
+			Constructing wrapper function "hermitsplines.resetgrid"...
+			  resetgrid(xg1,[nx1])
+			Constructing wrapper function "hermitsplines.setcolloc"...
+			  setcolloc()
+		Creating wrapper for Fortran function "hsplinebc"("hsplinebc")...
+			Constructing wrapper function "hermitsplines.hsplinebc"...
+			  hsplinebc = hsplinebc(i,x)
+		Creating wrapper for Fortran function "hsplinebc1"("hsplinebc1")...
+			Constructing wrapper function "hermitsplines.hsplinebc1"...
+			  hsplinebc1 = hsplinebc1(i,x)
+		Creating wrapper for Fortran function "hsplinebc2"("hsplinebc2")...
+			Constructing wrapper function "hermitsplines.hsplinebc2"...
+			  hsplinebc2 = hsplinebc2(i,x)
+		Creating wrapper for Fortran function "hspline"("hspline")...
+			Constructing wrapper function "hermitsplines.hspline"...
+			  hspline = hspline(i,x)
+		Creating wrapper for Fortran function "hspline1"("hspline1")...
+			Constructing wrapper function "hermitsplines.hspline1"...
+			  hspline1 = hspline1(i,x)
+		Creating wrapper for Fortran function "hspline2"("hspline2")...
+			Constructing wrapper function "hermitsplines.hspline2"...
+			  hspline2 = hspline2(i,x)
+		Creating wrapper for Fortran function "phi"("phi")...
+			Constructing wrapper function "hermitsplines.phi"...
+			  phi = phi(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "psi"("psi")...
+			Constructing wrapper function "hermitsplines.psi"...
+			  psi = psi(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "chi"("chi")...
+			Constructing wrapper function "hermitsplines.chi"...
+			  chi = chi(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "phi1"("phi1")...
+			Constructing wrapper function "hermitsplines.phi1"...
+			  phi1 = phi1(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "psi1"("psi1")...
+			Constructing wrapper function "hermitsplines.psi1"...
+			  psi1 = psi1(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "chi1"("chi1")...
+			Constructing wrapper function "hermitsplines.chi1"...
+			  chi1 = chi1(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "phi2"("phi2")...
+			Constructing wrapper function "hermitsplines.phi2"...
+			  phi2 = phi2(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "psi2"("psi2")...
+			Constructing wrapper function "hermitsplines.psi2"...
+			  psi2 = psi2(x,x1i,xi,xi1)
+		Creating wrapper for Fortran function "chi2"("chi2")...
+			Constructing wrapper function "hermitsplines.chi2"...
+			  chi2 = chi2(x,x1i,xi,xi1)
+			Constructing wrapper function "hermitsplines.locat"...
+			  locat(x,i1,i2)
+	Wrote C/API module "HermitSplines" to file "/tmp/tmpmgzWKP/src.linux-x86_64-2.7/HermitSplinesmodule.c"
+	Fortran 90 wrappers are saved to "/tmp/tmpmgzWKP/src.linux-x86_64-2.7/HermitSplines-f2pywrappers2.f90"
+  adding '/tmp/tmpmgzWKP/src.linux-x86_64-2.7/fortranobject.c' to sources.
+  adding '/tmp/tmpmgzWKP/src.linux-x86_64-2.7' to include_dirs.
+copying /home/alexey/anaconda2/lib/python2.7/site-packages/numpy/f2py/src/fortranobject.c -> /tmp/tmpmgzWKP/src.linux-x86_64-2.7
+copying /home/alexey/anaconda2/lib/python2.7/site-packages/numpy/f2py/src/fortranobject.h -> /tmp/tmpmgzWKP/src.linux-x86_64-2.7
+  adding '/tmp/tmpmgzWKP/src.linux-x86_64-2.7/HermitSplines-f2pywrappers2.f90' to sources.
+build_src: building npy-pkg config files
+running build_ext
+customize UnixCCompiler
+customize UnixCCompiler using build_ext
+customize Gnu95FCompiler
+Found executable /usr/bin/gfortran
+customize Gnu95FCompiler using build_ext
+building 'HermitSplines' extension
+compiling C sources
+C compiler: gcc -pthread -B /home/alexey/anaconda2/compiler_compat -Wl,--sysroot=/ -fno-strict-aliasing -g -O2 -DNDEBUG -g -fwrapv -O3 -Wall -Wstrict-prototypes -fPIC
+
+creating /tmp/tmpmgzWKP/tmp
+creating /tmp/tmpmgzWKP/tmp/tmpmgzWKP
+creating /tmp/tmpmgzWKP/tmp/tmpmgzWKP/src.linux-x86_64-2.7
+compile options: '-I/tmp/tmpmgzWKP/src.linux-x86_64-2.7 -I/home/alexey/anaconda2/lib/python2.7/site-packages/numpy/core/include -I/home/alexey/anaconda2/include/python2.7 -c'
+gcc: /tmp/tmpmgzWKP/src.linux-x86_64-2.7/HermitSplinesmodule.c
+gcc: /tmp/tmpmgzWKP/src.linux-x86_64-2.7/fortranobject.c
