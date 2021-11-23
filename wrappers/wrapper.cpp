@@ -60,7 +60,7 @@ PYBIND11_MODULE(hamiltonian, handle) {
     .def_property_readonly("h", &Hamiltonian3D::getHamiltonian)
     .def("get_state", &Hamiltonian3D::getEigenfunction)
     .def("get_exp_ground_state", [](Hamiltonian3D& self, double err, double dt){
-        groundState gs = self.getExpGroundState(err, dt);
+        GroundState gs = self.getExpGroundState(err, dt);
         return py::make_tuple(gs.eigValue, gs.eigVector);
     })
     .def("evolutionStep", &Hamiltonian3D::evolutionStep)

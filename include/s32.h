@@ -20,31 +20,18 @@ public:
     Eigen::VectorXd collocGrid;
     
     CubicHermiteSplines(const Eigen::Ref<const Eigen::VectorXd>& initGrid);
-
     ~CubicHermiteSplines();
-
     void initCollocGrid(int leftBC, int rightBC);
-
     void initRefPoints();
-
     void initOverlapMatrix();
-
     double fBSpline(double t, int i);
-
     double d1BSpline(double t, int i);
-
     double d2BSpline(double t, int i);
-
     double phi(double x, double x1i, double xi, double xi1);
-
     double phi1(double x, double x1i, double xi, double xi1);
-
     double phi2(double x, double x1i, double xi, double xi1);
-
     double psi(double x, double x1i, double xi, double xi1);
-
     double psi1(double x, double x1i, double xi, double xi1);
-
     double psi2(double x, double x1i, double xi, double xi1);
 };
 
@@ -55,20 +42,16 @@ public:
     int rightBC;
     int splineBCdim;
     CubicHermiteSplines space;
-    
     Eigen::MatrixXd overlapMatrix;
 
     CHermiteBC(const Eigen::Ref<const Eigen::VectorXd>& initGrid, int leftBC, int rightBC);
     ~CHermiteBC();
-
     void initOverlapMatrix();
     double fBSplineBC(double t, int i);
-
     double d1BSplineBC(double t, int i);
-
     double d2BSplineBC(double t, int i);
     int getSpaceDim();
-
+    int locate(double x);
     Eigen::VectorXd getLeftPoints();
     Eigen::VectorXd getRightPoints();
     Eigen::VectorXd getMidPoints();

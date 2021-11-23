@@ -7,7 +7,7 @@
 #include <array>
 
 
-struct groundState{
+struct GroundState{
     double eigValue;
     Eigen::VectorXd eigVector;
 };
@@ -17,21 +17,25 @@ class Hamiltonian3D
 {
 public:
     double r;
+    std::array<double, 3> m;  
+    std::array<double, 3> signs;
     CHermiteBC aSplines;
     CHermiteBC bSplines;
-    Eigen::MatrixXd h;
-    std::array<double, 3> m;  
-    std::array<double, 3> signs;  
+    Eigen::MatrixXd h;  
+    Eigen::MatrixXd aLaplace;
+    Eigen::MatrixXd bLaplace;
     Eigen::MatrixXd pMatr;
     Eigen::MatrixXd nMatr;
     Eigen::MatrixXd pMatrInv;
     Eigen::MatrixXd eigVectors;
     Eigen::VectorXcd eigVals;
-    Hamiltonian3D(const Eigen::Ref<const Eigen::VectorXd>& aGrid, 
-                    const Eigen::Ref<const Eigen::VectorXd>& bGrid, 
-                    const std::array<int, 4>& BCs,
-                    const std::array<double, 3>& masses,
-                    double regularization, int n);
+    Hamiltonian3D(
+        const Eigen::Ref<const Eigen::VectorXd>& aGrid, 
+        const Eigen::Ref<const Eigen::VectorXd>& bGrid, 
+        const std::array<int, 4>& BCs,
+        const std::array<double, 3>& masses,
+        double regularization, int n
+        );
     ~Hamiltonian3D();
     Eigen::MatrixXd generateNMatr();
     Eigen::MatrixXd generatePMatr();
@@ -44,7 +48,7 @@ public:
     Eigen::MatrixXd getNMatr();
     Eigen::MatrixXd getHamiltonian();
     Eigen::MatrixXd getTDHamiltonian(double dt, double V);
-    groundState getExpGroundState(double err, double dt);
+    GroundState getExpGroundState(double err, double dt);
     Eigen::VectorXcd evolutionStep(Eigen::VectorXcd state, int iters, double dt, double V);
 };
 

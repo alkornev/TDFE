@@ -10,7 +10,7 @@ from tqdm import tqdm
 import sys
 
 
-BC = [1, 1, 1, 1]
+BC = [-1, -1, -1, -1]
 MASSES = [1836.0, 1836.0, 1.0]
 REG = 0.25
 LETTERS = [r"\alpha", r"\beta", r"\gamma"]
@@ -85,7 +85,7 @@ class AnimationWF:
 
     def save(self):
         time = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-        self.anim.save(f'mp4s/WF-{time}-steps-{self.frames}.mp4', dpi=50)
+        self.anim.save(f'mp4s/WF-{time}-steps-{self.frames}.mp4', dpi=80)
 
 
 
@@ -93,14 +93,14 @@ def main():
     print("Module: ", dir(build.hamiltonian))
     set_num_threads(8)
     print("max threads: ", get_max_threads())
-    aLeftEnd = -20
-    aRightEnd = 20
-    bLeftEnd = -45
-    bRightEnd = 45
+    aLeftEnd = -5
+    aRightEnd = 5
+    bLeftEnd = -5
+    bRightEnd = 5
     box_shapes = (aLeftEnd, aRightEnd, bLeftEnd, bRightEnd)
 
-    UnitAGrid = aRightEnd*np.linspace(-1, 1, 31)
-    UnitBGrid = np.linspace(-1, 1, 31)
+    UnitAGrid = aRightEnd*np.linspace(-1, 1, 30)
+    UnitBGrid = np.linspace(-1, 1, 30)
 
     aGrid = np.fromiter(map(lambda x: grid(x), UnitAGrid), dtype=np.float64)
     bGrid = bRightEnd*UnitBGrid
@@ -118,7 +118,7 @@ def main():
     print("=="*40)
 
     anim = AnimationWF(box_shapes, h3)
-    anim.animate(n_frames=4000, interval=10)
+    anim.animate(n_frames=2, interval=10)
         #cmap = 'RdBu_r
         #pair_indices = fr"{LETTERS[i%3]}"
         #triple_indices = fr"{LETTERS[(i+1)%3]}{LETTERS[(i+2)%3]}"

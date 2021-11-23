@@ -15,7 +15,6 @@ set(BLA_VENDOR Intel10_64lp)
 set(MKL_INTERFACE_FULL intel_lp64)
 find_package(MKL)
 find_package(OpenMP REQUIRED)
-find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
 
@@ -31,10 +30,10 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   # using Visual Studio C++
 endif()
-add_compile_options(-O3 -qmkl -mavx -mfma -qopenmp)
+add_compile_options(-O3 -msse4 -DNDEBUG -qmkl -mavx -mfma -qopenmp)
 
 
-pybind11_add_module(hamiltonian SHARED ${LIBRARY_FILES}/s32.cpp ${LIBRARY_FILES}/bornoppenheimer.cpp ${LIBRARY_FILES}/hamiltonian2d.cpp ${LIBRARY_FILES}/hamiltonian3d.cpp ${WRAPPER_FOLDER}/wrapper.cpp)
-target_include_directories(hamiltonian PUBLIC ${INCLUDE_FILES} ${MKLROOT}/include)
-target_link_libraries(hamiltonian PUBLIC OpenMP::OpenMP_CXX -L${MKLROOT}/lib -Wl,-rpath,${MKLROOT}/lib -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl)
+pybind11_add_module(hamiltonian SHARED ${WRAPPER_FOLDER}/wrapper.cpp ${LIBRARY_FILES}/s32.cpp ${LIBRARY_FILES}/bornoppenheimer.cpp ${LIBRARY_FILES}/hamiltonian2d.cpp ${LIBRARY_FILES}/hamiltonian3d.cpp)
+target_include_directories(hamiltonian PUBLIC ${INCLUDE_FILES})
+target_link_libraries(hamiltonian PUBLIC -Wl, -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl)
 #target_link_libraries(hamiltonian PUBLIC OpenMP::OpenMP_CXX -lmkl_sequential -lmkl_core -lpthread -lm -ldl)# )

@@ -14,40 +14,45 @@
 #include <typeinfo>
 
 
-Hamiltonian3D::Hamiltonian3D(const Eigen::Ref<const Eigen::VectorXd>& aGrid, 
+Hamiltonian3D::Hamiltonian3D(
+    const Eigen::Ref<const Eigen::VectorXd>& aGrid, 
     const Eigen::Ref<const Eigen::VectorXd>& bGrid, 
     const std::array<int, 4>& BCs,
-    const std::array<double, 3>& masses, double regularization, int n) : aSplines(aGrid, BCs[0], BCs[1]), bSplines(bGrid, BCs[2], BCs[3])
-    {
-        r = regularization;
-        // the last value in the array is the mass of electron
-        m = masses;//{1836.0, 3671.0, 1.0};
-        signs = {1.0, -1.0, -1.0};
-        for (int k=0; k < (n % 3); k++){
-            std::next_permutation(signs.begin(), signs.end());
-            std::next_permutation(m.begin(), m.end());
-            //std::cout << signs[0] << " " << signs[1] << " " << signs[2] << std::endl;
-        }
-        
-        //std::cout << "Initialization..." << std::endl;
-        nMatr = generateNMatr();
-        //std::cout << "Normalization Matrix is ready! Continuing..." << std::endl;
-
-        pMatr = generatePMatr();
-
-        //std::cout << "Collocation Matrix is ready! Continuing..." << std::endl;
-
-        pMatrInv = pMatr.inverse();
-
-        //std::cout << "Inversion of Collocation Matrix is ready! Continuing..." << std::endl;
-
-        h = generateTheHamiltonian();
-        //std::cout << "Hamiltonian is ready! Continuing..." << std::endl;
-        //getTheSpectrum();  
+    const std::array<double, 3>& masses, 
+    double regularization, 
+    int n
+    ) : aSplines(aGrid, BCs[0], BCs[1]), bSplines(bGrid, BCs[2], BCs[3])
+{
+    r = regularization;
+    // the last value in the array is the mass of electron
+    m = masses;//{1836.0, 3671.0, 1.0};
+    signs = {1.0, -1.0, -1.0};
+    for (int k=0; k < (n % 3); k++){
+        std::next_permutation(signs.begin(), signs.end());
+        std::next_permutation(m.begin(), m.end());
+        //std::cout << signs[0] << " " << signs[1] << " " << signs[2] << std::endl;
     }
+    
+    //std::cout << "Initialization..." << std::endl;
+    nMatr = generateNMatr();
+    //std::cout << "Normalization Matrix is ready! Continuing..." << std::endl;
+
+    pMatr = generatePMatr();
+
+    //std::cout << "Collocation Matrix is ready! Continuing..." << std::endl;
+
+    pMatrInv = pMatr.inverse();
+
+    //std::cout << "Inversion of Collocation Matrix is ready! Continuing..." << std::endl;
+
+    h = generateTheHamiltonian();
+    //std::cout << "Hamiltonian is ready! Continuing..." << std::endl;
+    //getTheSpectrum();  
+}
 Hamiltonian3D::~Hamiltonian3D(){}
 
-Eigen::MatrixXd Hamiltonian3D::generateNMatr(){
+Eigen::MatrixXd Hamiltonian3D::generateNMatr()
+{
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
@@ -61,7 +66,8 @@ Eigen::MatrixXd Hamiltonian3D::generateNMatr(){
     return nMatrix; 
 }
 
-Eigen::MatrixXd Hamiltonian3D::generatePMatr(){
+Eigen::MatrixXd Hamiltonian3D::generatePMatr()
+{
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
@@ -78,7 +84,8 @@ Eigen::MatrixXd Hamiltonian3D::generatePMatr(){
     return pMatrix;   
 }
 
-Eigen::MatrixXd Hamiltonian3D::generateTheHamiltonian(){
+Eigen::MatrixXd Hamiltonian3D::generateTheHamiltonian()
+{
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
@@ -103,29 +110,48 @@ Eigen::MatrixXd Hamiltonian3D::generateTheHamiltonian(){
     return ham;   
 }
 
-double Hamiltonian3D::getEigenfunction(const Eigen::Ref<const Eigen::VectorXd>& coefs, double x, double y)
+double Hamiltonian3D::getEigenfunction(
+    const Eigen::Ref<const Eigen::VectorXd>& coefs,
+    double x,
+    double y
+)
 {
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
 
-    Eigen::VectorXd t = Eigen::VectorXd(nMax);
+    double t = 0.0;
+    //Eigen::VectorXd t = Eigen::VectorXd(nMax);
     //std::cout <<"size of points: "<< t.size() << std::endl;
-    for(int j=0; j < nMax; j++){
-        t[j] = aSplines.fBSplineBC(x, j / bNMax)*bSplines.fBSplineBC(y, j % bNMax);
+
+    int aStartIdx = aSplines.locate(x);
+    int bStartIdx = bSplines.locate(y);
+
+    int idx = 0;
+    
+    // for(int i = 0; i < nMax; i++){
+    //     t[i] = aSplines.fBSplineBC(x, i / bNMax)*bSplines.fBSplineBC(y, i % bNMax);
+    // }
+    int aShift = (aSplines.rightBC >= 0 && aStartIdx == (aSplines.splineBCdim - 1)) || (aSplines.leftBC >= 0 && aStartIdx == 0);
+    int bShift = (bSplines.rightBC >= 0 && bStartIdx == (bSplines.splineBCdim - 1)) || (bSplines.leftBC >= 0 && bStartIdx == 0);
+
+    for(int i = aStartIdx; i < aStartIdx + aSplines.space.splinesPerNode * 2; i++){
+        for (int j = bStartIdx; j < bStartIdx + bSplines.space.splinesPerNode * 2; j++){
+            idx = j + bNMax*i;
+            t += coefs(idx) * aSplines.fBSplineBC(x, idx / bNMax)*bSplines.fBSplineBC(y, idx % bNMax);
+        }
     }
-
-
     //std::cout <<"size of coefs" << cshaped.size() << std::endl;
 
-    double res = t.dot(coefs);
-
+    //double res = t.dot(coefs);
+    double res = t;
     //std::cout << res << std::endl;
 
     return res;
 }
 
-groundState Hamiltonian3D::getExpGroundState(double err, double dt){
+GroundState Hamiltonian3D::getExpGroundState(double err, double dt)
+{
     // calc exponent using pade approximation
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
@@ -149,12 +175,13 @@ groundState Hamiltonian3D::getExpGroundState(double err, double dt){
         residue = (h*eigVector - eigValue*eigVector).norm(); 
         //std::cout << eigValue << "    " << residue << std::endl;
     }
-    struct groundState gs = {eigValue, eigVector};
+    struct GroundState gs = {eigValue, eigVector};
 
     return gs;
 }
 
-void Hamiltonian3D::getTheSpectrum(){
+void Hamiltonian3D::getTheSpectrum()
+{
     Eigen::EigenSolver<Eigen::MatrixXd> es;
   
     //int const n = Eigen::nbThreads( );
@@ -170,7 +197,7 @@ void Hamiltonian3D::getTheSpectrum(){
         indices[i] = i;
     };
 
-    std::sort(indices.begin(), indices.end(), [&](const int& a, const int& b)->bool {return (eigVals[a].real() < eigVals[b].real());});
+    std::sort(indices.begin(), indices.end(), [&](const int& a, const int& b)-> bool {return (eigVals[a].real() < eigVals[b].real());});
 
     Eigen::PermutationMatrix<Eigen::Dynamic,Eigen::Dynamic> P;
     P.indices() = indices;
@@ -195,7 +222,8 @@ Eigen::MatrixXd Hamiltonian3D::getNMatr(){ return nMatr; }
 
 Eigen::MatrixXd Hamiltonian3D::getHamiltonian(){ return h; }
 
-Eigen::MatrixXd Hamiltonian3D::getTDHamiltonian(double t, double V){
+Eigen::MatrixXd Hamiltonian3D::getTDHamiltonian(double t, double V)
+{
     double w0 = 0.058;
     double I0 = 350;
     double T = 248;
@@ -220,7 +248,8 @@ Eigen::MatrixXd Hamiltonian3D::getTDHamiltonian(double t, double V){
     }
     return pMatrInv*electricField;
 }
-Eigen::VectorXcd Hamiltonian3D::evolutionStep(Eigen::VectorXcd state, int iter, double dt, double V){
+Eigen::VectorXcd Hamiltonian3D::evolutionStep(Eigen::VectorXcd state, int iter, double dt, double V)
+{
     /*
         We want to calculate this formula:
         (I - i/2*A)*inv(I + i/2*A) x = c
@@ -264,8 +293,6 @@ Eigen::VectorXcd Hamiltonian3D::evolutionStep(Eigen::VectorXcd state, int iter, 
 
     y = dec.solve(y);
     y = S*y;
-    
-    
+       
     return y;
 }
-

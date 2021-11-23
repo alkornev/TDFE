@@ -21,7 +21,7 @@ def main():
     set_num_threads(8)
 
     print("Calculating Born-Oppenheimer electronic state: ")
-    Rs = np.arange(0.5, 15.0, 0.5)
+    Rs = np.arange(0.00, 10.0, 0.25)
     U = np.zeros((3, len(Rs)))
     for k, R in enumerate(Rs):
         for n in [200]:
