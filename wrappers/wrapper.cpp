@@ -6,6 +6,7 @@
 #include <pybind11/stl.h>
 #include <array>
 #include <Eigen/Core>
+#include <Eigen/SparseCore>
 #include "hamiltonian2d.h"
 #include "hamiltonian3d.h"
 #include "bornoppenheimer.h"
@@ -59,10 +60,10 @@ PYBIND11_MODULE(hamiltonian, handle) {
     .def_property_readonly("nMatr", &Hamiltonian3D::getNMatr)
     .def_property_readonly("h", &Hamiltonian3D::getHamiltonian)
     .def("get_state", &Hamiltonian3D::getEigenfunction)
-    .def("get_exp_ground_state", [](Hamiltonian3D& self, double err, double dt){
-        GroundState gs = self.getExpGroundState(err, dt);
-        return py::make_tuple(gs.eigValue, gs.eigVector);
-    })
+    // .def("get_exp_ground_state", [](Hamiltonian3D& self, double err, double dt){
+    //     GroundState gs = self.getExpGroundState(err, dt);
+    //     return py::make_tuple(gs.eigValue, gs.eigVector);
+    // })
     .def("evolutionStep", &Hamiltonian3D::evolutionStep)
     ;
 

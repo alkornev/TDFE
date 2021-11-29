@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 /*
  * This module contains basis functions for S32 space for non-uniform grids
@@ -313,6 +314,36 @@ CHermiteBC::CHermiteBC(const Eigen::Ref<const Eigen::VectorXd>& initGrid, int lB
 }
 
 CHermiteBC::~CHermiteBC(){}
+
+Eigen::SparseMatrix<double> CHermiteBC::generateSPMatr(){
+    int dim = splineBCdim;
+    Eigen::SparseMatrix<double> pMatrix(dim, dim);
+
+    for (int i = 0; i < splineBCdim; i++){
+        double xi = space.collocGrid[i];
+        // std::cout << "axi:" << axi << " bxi:" << bxi << std::endl;
+        for (int j = 0; j < splineBCdim; j++){   
+            pMatrix.coeffRef(i, j) = fBSplineBC(xi, j);
+        }
+    }
+
+    return pMatrix;
+}
+
+Eigen::SparseMatrix<double> CHermiteBC::generateSNMatr(){
+    int dim = splineBCdim;
+    Eigen::SparseMatrix<double> nMatrix(dim, dim);
+
+    for (int i = 0; i < splineBCdim; i++){
+        // std::cout << "axi:" << axi << " bxi:" << bxi << std::endl;
+        for (int j = 0; j < splineBCdim; j++){   
+            nMatrix.coeffRef(i, j) = overlapMatrix(i,j);
+        }
+    }
+
+    return nMatrix;
+}
+
 
 void CHermiteBC::initOverlapMatrix()
 {

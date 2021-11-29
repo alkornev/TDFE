@@ -6,9 +6,6 @@ set(INCLUDE_FILES "./include/")
 set(LIBRARY_FILES "./lib/")
 set(WRAPPER_FOLDER "./wrappers")
 
-#include_directories(include/basis/)
-#add_library(S32 ${LIBRARY_FILES}/S32.cpp)
-#target_include_directories(S32 PUBLIC ${INCLUDE_FILES})
 
 #include_directories(${INCLUDE_FILES})
 set(BLA_VENDOR Intel10_64lp)
@@ -19,7 +16,7 @@ find_package(LAPACK REQUIRED)
 
 
 add_subdirectory(thirdparty/pybind11)
-include_directories(thirdparty/eigen)
+include_directories("thirdparty/eigen" "thirdparty/spectra/include")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-Wall)
@@ -33,7 +30,15 @@ endif()
 add_compile_options(-O3 -msse4 -DNDEBUG -qmkl -mavx -mfma -qopenmp)
 
 
-pybind11_add_module(hamiltonian SHARED ${WRAPPER_FOLDER}/wrapper.cpp ${LIBRARY_FILES}/s32.cpp ${LIBRARY_FILES}/bornoppenheimer.cpp ${LIBRARY_FILES}/hamiltonian2d.cpp ${LIBRARY_FILES}/hamiltonian3d.cpp)
+pybind11_add_module(hamiltonian SHARED 
+    ${WRAPPER_FOLDER}/wrapper.cpp 
+    ${LIBRARY_FILES}/s32.cpp
+    ${LIBRARY_FILES}/bornoppenheimer.cpp
+    ${LIBRARY_FILES}/hamiltonian2d.cpp 
+    ${LIBRARY_FILES}/hamiltonian3d.cpp
+)
+#target_include_directories(hamiltonian SHARED thirdparty/eigen)
 target_include_directories(hamiltonian PUBLIC ${INCLUDE_FILES})
+
 target_link_libraries(hamiltonian PUBLIC -Wl, -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl)
 #target_link_libraries(hamiltonian PUBLIC OpenMP::OpenMP_CXX -lmkl_sequential -lmkl_core -lpthread -lm -ldl)# )

@@ -1,6 +1,7 @@
 #ifndef S32_H
 #define S32_H
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 
 void check_order(double x1i, double xi, double xi1);
@@ -52,6 +53,8 @@ public:
     double d2BSplineBC(double t, int i);
     int getSpaceDim();
     int locate(double x);
+    Eigen::SparseMatrix<double> generateSPMatr();
+    Eigen::SparseMatrix<double> generateSNMatr();
     Eigen::VectorXd getLeftPoints();
     Eigen::VectorXd getRightPoints();
     Eigen::VectorXd getMidPoints();

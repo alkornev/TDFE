@@ -2,6 +2,7 @@
 #define BORNOPPENHEIMER2D_H
 #include "s32.h"
 #include <Eigen/Dense>
+#include <array>
 
 
 class BornOppenheimer2D

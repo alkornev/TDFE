@@ -34,8 +34,8 @@ def main():
             coefs = h2.get_eigenvectors()
             print(f"R: {R:.2f},    grid size: {len(h2_grid)},    U: {spectra[:3] + 0.5/math.sqrt(R*R + REG)}")
             U[0, k] = spectra[0] + 0.5/math.sqrt(R*R + REG)
-            U[1, k] = spectra[2] + 0.5/math.sqrt(R*R + REG)
-            U[2, k] = spectra[4] + 0.5/math.sqrt(R*R + REG)
+            U[1, k] = spectra[1] + 0.5/math.sqrt(R*R + REG)
+            U[2, k] = spectra[2] + 0.5/math.sqrt(R*R + REG)
             grd = RIGHT_END*np.linspace(-1, 1, 500)
             y = [h2.get_state(coefs[:, 0], xi) for xi in grd]
             #plt.plot(grd, y)
