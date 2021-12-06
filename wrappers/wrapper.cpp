@@ -59,11 +59,8 @@ PYBIND11_MODULE(hamiltonian, handle) {
     .def_property_readonly("pMatr", &Hamiltonian3D::getPMatr)
     .def_property_readonly("nMatr", &Hamiltonian3D::getNMatr)
     .def_property_readonly("h", &Hamiltonian3D::getHamiltonian)
+    .def("initLU", &Hamiltonian3D::initHamiltonianLU)
     .def("get_state", &Hamiltonian3D::getEigenfunction)
-    // .def("get_exp_ground_state", [](Hamiltonian3D& self, double err, double dt){
-    //     GroundState gs = self.getExpGroundState(err, dt);
-    //     return py::make_tuple(gs.eigValue, gs.eigVector);
-    // })
     .def("evolutionStep", &Hamiltonian3D::evolutionStep)
     ;
 

@@ -76,7 +76,7 @@ public:
     SparseRMatrix generateTheHamiltonian();
     double getEigenfunction(const Eigen::Ref<const RVector>& coefs, double x, double y);
     void getTheSpectrum(int vector_n, int krylov_n);
-    void initHamiltonianLU();
+    void initHamiltonianLU(double dt);
     CVector getEigenvalues();
     RMatrix getEigenvectors();
     SparseRMatrix getPMatr();

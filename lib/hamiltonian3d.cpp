@@ -31,7 +31,8 @@ Hamiltonian3D::Hamiltonian3D(
     const std::array<double, 3>& masses, 
     double regularization, 
     int n
-    ) : aSplines(aGrid, BCs[0], BCs[1]), bSplines(bGrid, BCs[2], BCs[3])
+    ) 
+: aSplines(aGrid, BCs[0], BCs[1]), bSplines(bGrid, BCs[2], BCs[3])
 {
     r = regularization;
     // the last value in the array is the mass of electron
@@ -65,8 +66,7 @@ Hamiltonian3D::Hamiltonian3D(
     h = generateTheHamiltonian();
     std::cout << "Hamiltonian is ready! Continuing..." << std::endl;
     //std::cout << h << std::endl;
-    
-    initHamiltonianLU();
+
 }
 Hamiltonian3D::~Hamiltonian3D(){}
 
@@ -145,7 +145,7 @@ SparseRMatrix Hamiltonian3D::generateTheHamiltonian()
         double axi = aSplines.space.collocGrid[i / bNMax];
         double bxi = bSplines.space.collocGrid[i % bNMax];
         for (int j = 0; j < nMax; j++){
-            potential = signs[0]/sqrt(axi*axi + r) +
+            potential = signs[0]/sqrt(axi*axi + 0.03) +
                         signs[1]/sqrt((bxi - m[0]*axi/(m[0]+m[1]))*(bxi - m[0]*axi/(m[0]+m[1])) + r) +
                         signs[2]/sqrt((bxi + m[1]*axi/(m[0]+m[1]))*(bxi + m[1]*axi/(m[0]+m[1])) + r);
             ham.insert(i, j) = 0.5*potential*aSplines.fBSplineBC(axi, j / bNMax)*bSplines.fBSplineBC(bxi, j % bNMax);
@@ -178,8 +178,8 @@ double Hamiltonian3D::getEigenfunction(
     Eigen::VectorXd t = Eigen::VectorXd(nMax);
     //std::cout <<"size of points: "<< t.size() << std::endl;
 
-    int aStartIdx = aSplines.locate(x);
-    int bStartIdx = bSplines.locate(y);
+    //int aStartIdx = aSplines.locate(x);
+    //int bStartIdx = bSplines.locate(y);
 
     int idx = 0;
     
@@ -289,24 +289,37 @@ SparseRMatrix Hamiltonian3D::getTDHamiltonian(double t, double V)
     SparseRMatrix electricField = SparseRMatrix(nMax, nMax);
     SparseRMatrix eField = SparseRMatrix(bNMax, bNMax);
     
-    electricField.reserve(Eigen::VectorXi::Constant(nMax,nMax));
     eField.reserve(Eigen::VectorXi::Constant(bNMax,bNMax));
 
     double bxi = 0.0;
     double axi = 0.0;
 
-    double pulse = V0*std::exp(-envArg*envArg)*sin(w0*t);
+    double pulse = V0*std::exp(-envArg*envArg)*cos(t);
     double basisElement = 0.0;
     for(int i=0; i < bNMax; i++){
         bxi = bSplines.space.collocGrid[i];
         for (int j=0; j < bNMax; j++){
+            //std::cout << "bpmatr" << bpMatr.coeff(i, j) << " bxi " << bxi << "pulse " << pulse;
             eField.insert(i, j) = -(1.0+m[2]/(m[0]+m[1]+m[2]))*bxi*pulse*bpMatr.coeff(i, j);
         }
+        //std::cout << std::endl;
     }
     eField.makeCompressed();
+
+    // std::cout << "eField after filling\n" << eField << std::endl;
+    // std::cout << "bpMatrInv\n" << bpMatrInv << std::endl;
+    // std::cout << "bpMatr\n" << bpMatr << std::endl;
+
     eField = bpMatrInv * eField;
-    electricField = Eigen::kroneckerProduct(I, eField)*electricField;
-    electricField.makeCompressed();
+
+    //electricField = Eigen::kroneckerProduct(apMatr, eField);
+    // electricField = Eigen::kroneckerProduct(I, bpMatrInv)*electricField;
+    // electricField = Eigen::kroneckerProduct(apMatrInv, J)*electricField;
+    electricField = Eigen::kroneckerProduct(I, eField);
+    //std::cout << eField << std::endl;
+    //
+    //std::cout << electricField << std::endl;
+    //electricField.makeCompressed();
     return electricField;
 }
 
@@ -327,17 +340,28 @@ CVector Hamiltonian3D::evolutionStep(CVector state, int iter, double dt, double 
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
 
-    std::complex<double> im(0.0, 1.0);
+    std::complex<double> im(0.0, dt);
     CVector y;
     y = solver.solve(state);
     y = S*y;
 
-    if (dt*iter < 248) {
-        auto Vt = getTDHamiltonian(dt*iter, V);
+    SparseCMatrix myI = SparseCMatrix(bNMax, bNMax);
+    SparseCMatrix myJ = SparseCMatrix(aNMax, aNMax);
+    myI.setIdentity();
+    myJ.setIdentity();
+
+    if (dt*iter < 248.0) {
+        std::cout << "dt " << dt*iter<< ", iter " << iter << std::endl;
+
+        //std::cout << dt*iter << std::endl;
+        auto Vt = getTDHamiltonian(dt*(iter + 0.5), V);
+        //std::cout << Vt << std::endl;
         Eigen::SparseMatrix<std::complex<double>> St = eye - 0.5 * im * Vt.cast<std::complex<double>>();
         Eigen::SparseMatrix<std::complex<double>> Ft = eye + 0.5 * im * Vt.cast<std::complex<double>>();
 
         Eigen::SparseLU<Eigen::SparseMatrix<std::complex<double>>> solverVt;
+        // Eigen::SparseMatrix<std::complex<double>> FKt = Eigen::kroneckerProduct(myJ, Ft);
+        // Eigen::SparseMatrix<std::complex<double>> SKt = Eigen::kroneckerProduct(myJ, St);
         solverVt.compute(Ft);
 
         y = solverVt.solve(y);
@@ -348,12 +372,12 @@ CVector Hamiltonian3D::evolutionStep(CVector state, int iter, double dt, double 
     y = solver.solve(y);
     y = S*y;    
 
-
     return y;
 }
 
-void Hamiltonian3D::initHamiltonianLU(){
-    std::complex<double> im(0.0, 1.0);
+void Hamiltonian3D::initHamiltonianLU(double dt){
+    double deltat = dt;
+    std::complex<double> im(0.0, deltat);
 
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
