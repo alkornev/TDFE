@@ -124,7 +124,7 @@ def main():
 
     anim = AnimationWF(box_shapes, h3, dt)
     #anim.plot(show=True)
-    anim.animate(n_frames=5000, interval=20)
+    anim.animate(n_frames=1000, interval=20)
 
     print("Elapsed time:", datetime.datetime.now() - begin_time)
     

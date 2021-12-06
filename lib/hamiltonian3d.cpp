@@ -282,7 +282,7 @@ SparseRMatrix Hamiltonian3D::getTDHamiltonian(double t, double V)
     double I0 = 350;
     double T = 248;
     double V0 = V;
-    double envArg = t/T;
+    double envArg = (t - 450)/T;
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
@@ -342,8 +342,10 @@ CVector Hamiltonian3D::evolutionStep(CVector state, int iter, double dt, double 
 
     std::complex<double> im(0.0, dt);
     CVector y;
-    y = solver.solve(state);
-    y = S*y;
+    
+    y = S*state;
+    y = solver.solve(y);
+    
 
     SparseCMatrix myI = SparseCMatrix(bNMax, bNMax);
     SparseCMatrix myJ = SparseCMatrix(aNMax, aNMax);
@@ -364,13 +366,12 @@ CVector Hamiltonian3D::evolutionStep(CVector state, int iter, double dt, double 
         // Eigen::SparseMatrix<std::complex<double>> SKt = Eigen::kroneckerProduct(myJ, St);
         solverVt.compute(Ft);
 
-        y = solverVt.solve(y);
         y = St*y;
-
+        y = solverVt.solve(y);
     }
-
-    y = solver.solve(y);
+    
     y = S*y;    
+    y = solver.solve(y);
 
     return y;
 }
