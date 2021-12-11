@@ -317,13 +317,18 @@ CHermiteBC::~CHermiteBC(){}
 
 Eigen::SparseMatrix<double> CHermiteBC::generateSPMatr(){
     int dim = splineBCdim;
+    int shift = (int) (leftBC >= 0);
+
     Eigen::SparseMatrix<double> pMatrix(dim, dim);
 
     for (int i = 0; i < splineBCdim; i++){
         double xi = space.collocGrid[i];
-        // std::cout << "axi:" << axi << " bxi:" << bxi << std::endl;
-        for (int j = 0; j < splineBCdim; j++){   
-            pMatrix.coeffRef(i, j) = fBSplineBC(xi, j);
+        for (int j = 0; j < splineBCdim; j++){  
+            double leftJ = space.leftPoints[j+shift];
+            double rightJ = space.rightPoints[j+shift];
+            if (fBSplineBC(xi, j) != 0.0) {
+                pMatrix.insert(i, j) = fBSplineBC(xi, j);
+            }
         }
     }
 
@@ -332,12 +337,16 @@ Eigen::SparseMatrix<double> CHermiteBC::generateSPMatr(){
 
 Eigen::SparseMatrix<double> CHermiteBC::generateSNMatr(){
     int dim = splineBCdim;
+    int shift = (int) (leftBC >= 0);
+
     Eigen::SparseMatrix<double> nMatrix(dim, dim);
 
     for (int i = 0; i < splineBCdim; i++){
         // std::cout << "axi:" << axi << " bxi:" << bxi << std::endl;
         for (int j = 0; j < splineBCdim; j++){   
-            nMatrix.coeffRef(i, j) = overlapMatrix(i,j);
+            if (overlapMatrix(i, j) != 0.0) {
+                nMatrix.coeffRef(i, j) = overlapMatrix(i,j);
+            }
         }
     }
 

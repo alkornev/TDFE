@@ -32,10 +32,19 @@ class Hamiltonian3D
 {
 public:
     double r;
+    
+    double w0;
+    double I0;
+    double phi;
+    double tau;
+    double t0;
+    double dt;
+    
     std::array<double, 3> m;  
     std::array<double, 3> signs;
     CHermiteBC aSplines;
     CHermiteBC bSplines;
+
     SparseRMatrix h;  
     SparseRMatrix aLaplace;
     SparseRMatrix bLaplace;
@@ -52,16 +61,18 @@ public:
     SparseRMatrix anMatr;
     SparseRMatrix bnMatr;
     SparseRMatrix nMatr;
-    SparseCMatrix eye;
 
     RMatrix evectors;
     CVector evalues;
 
+    SparseCMatrix eye;
     Eigen::SparseMatrix<double> I;
     Eigen::SparseMatrix<double> J;
     
     Eigen::SparseMatrix<std::complex<double>> S;
     Eigen::SparseLU<Eigen::SparseMatrix<std::complex<double>>> solver;
+
+    SparseCMatrix W;
     Hamiltonian3D(
         const Eigen::Ref<const RVector>& aGrid, 
         const Eigen::Ref<const RVector>& bGrid, 
@@ -76,15 +87,17 @@ public:
     SparseRMatrix generateTheHamiltonian();
     double getEigenfunction(const Eigen::Ref<const RVector>& coefs, double x, double y);
     void getTheSpectrum(int vector_n, int krylov_n);
-    void initHamiltonianLU(double dt);
+    void initHamiltonianLU();
+    void initAbsorption(double a, double width);
+    void initImpulse(double init_time, double init_phase, double intensity, double freq, double duration, double step);
     CVector getEigenvalues();
     RMatrix getEigenvectors();
     SparseRMatrix getPMatr();
     SparseRMatrix getNMatr();
     SparseRMatrix getHamiltonian();
-    SparseRMatrix getTDHamiltonian(double dt, double V);
+    SparseCMatrix getImpulse(double t);
     GroundState getExpGroundState(double err, double dt);
-    CVector evolutionStep(CVector state, int iters, double dt, double V);
+    CVector evolutionStep(CVector state, int iter);
 };
 
 

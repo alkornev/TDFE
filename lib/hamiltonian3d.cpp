@@ -66,15 +66,14 @@ Hamiltonian3D::Hamiltonian3D(
     h = generateTheHamiltonian();
     std::cout << "Hamiltonian is ready! Continuing..." << std::endl;
     //std::cout << h << std::endl;
-
 }
+
 Hamiltonian3D::~Hamiltonian3D(){}
 
 SparseRMatrix Hamiltonian3D::generateNMatr()
 {
     anMatr = aSplines.generateSNMatr();
     bnMatr = bSplines.generateSNMatr();
-
     SparseRMatrix nMatrix = Eigen::kroneckerProduct(anMatr, bnMatr).eval();
 
     return nMatrix; 
@@ -84,11 +83,12 @@ SparseRMatrix Hamiltonian3D::generatePMatr()
 {
     apMatr = aSplines.generateSPMatr();
     bpMatr = bSplines.generateSPMatr();
-    SparseRMatrix pMatrix = Eigen::kroneckerProduct(bpMatr, bpMatr).eval();
 
+    
+    SparseRMatrix pMatrix = Eigen::kroneckerProduct(apMatr, bpMatr).eval();
+    
     return pMatrix;   
 }
-
 
 SparseRMatrix Hamiltonian3D::generateInvPMatr()
 {
@@ -128,37 +128,47 @@ SparseRMatrix Hamiltonian3D::generateTheHamiltonian()
     for(int i = 0; i < aNMax; i++){
         double axi = aSplines.space.collocGrid[i];
         for(int j = 0; j < aNMax; j++){
-            aLaplace.insert(i,j) = -1.0/mu*aSplines.d2BSplineBC(axi, j);
+            if (aSplines.d2BSplineBC(axi, j)) {
+                aLaplace.insert(i,j) = -1.0/mu*aSplines.d2BSplineBC(axi, j);
+            }
         }
     }
 
     for(int i = 0; i < bNMax; i++){
         double bxi = bSplines.space.collocGrid[i];
         for(int j = 0; j < bNMax; j++){
-            bLaplace.insert(i,j) = -1.0/mu123*bSplines.d2BSplineBC(bxi, j);
+            if (bSplines.d2BSplineBC(bxi, j) != 0.0) {
+                bLaplace.insert(i,j) = -1.0/mu123*bSplines.d2BSplineBC(bxi, j);
+            }
         }
     }
+    aLaplace.makeCompressed();
+    bLaplace.makeCompressed();
     
     SparseRMatrix laplacian = Eigen::kroneckerProduct(aLaplace, bpMatr) + Eigen::kroneckerProduct(apMatr, bLaplace);
+    laplacian.makeCompressed();
+    std::cout << "laplacia non-zeros " << laplacian.nonZeros() << std::endl;
+
+    double basisElement = 0.0;
     for (int i = 0; i < nMax; i++){
         //std::cout << "size of matrix: " << i << " " << std::endl;
         double axi = aSplines.space.collocGrid[i / bNMax];
         double bxi = bSplines.space.collocGrid[i % bNMax];
         for (int j = 0; j < nMax; j++){
-            potential = signs[0]/sqrt(axi*axi + 0.03) +
+            basisElement = aSplines.fBSplineBC(axi, j / bNMax)*bSplines.fBSplineBC(bxi, j % bNMax);
+            if (basisElement != 0.0){
+                potential = signs[0]/sqrt(axi*axi + 0.03) +
                         signs[1]/sqrt((bxi - m[0]*axi/(m[0]+m[1]))*(bxi - m[0]*axi/(m[0]+m[1])) + r) +
                         signs[2]/sqrt((bxi + m[1]*axi/(m[0]+m[1]))*(bxi + m[1]*axi/(m[0]+m[1])) + r);
-            ham.insert(i, j) = 0.5*potential*aSplines.fBSplineBC(axi, j / bNMax)*bSplines.fBSplineBC(bxi, j % bNMax);
+                ham.insert(i, j) = 0.5*potential*basisElement;
+            }
         }
     }
-    ham.makeCompressed();
     ham = ham + laplacian;
     //std::cout << "Hamiltonian almost ready!" << std::endl;
     //std::cout << pMatrInv << std::endl;
     //std::cout << ham << std::endl;
-    ham.prune(1e-20);
-    ham = Eigen::kroneckerProduct(I, bpMatrInv)*ham;
-    ham = Eigen::kroneckerProduct(apMatrInv, J)*ham;
+    ham.makeCompressed();
     //std::cout << ham << std::endl;
 
     return ham;   
@@ -200,44 +210,24 @@ double Hamiltonian3D::getEigenfunction(
     return res;
 }
 
-/*
-GroundState Hamiltonian3D::getExpGroundState(double err, double dt)
-{
-    
-    // calc exponent using pade approximation
-    int aNMax = aSplines.splineBCdim;
-    int bNMax = bSplines.splineBCdim;
-    int nMax = aNMax * bNMax;
-
-    RMatrix eye = RMatrix::Identity(nMax, nMax);
-    RVector eigVector = RVector::Random(nMax);
-
-    RMatrix S = eye - 0.5 * dt * h;
-    RMatrix F = eye + 0.5 * dt * h;
-    Eigen::PartialPivLU<RMatrix> dec(F);
-    
-    double eigValue = eigVector.dot(h*eigVector)/(eigVector.dot(eigVector));
-    double residue = (h*eigVector - eigValue*eigVector).norm(); 
-
-    while (residue > err){
-        RVector y = dec.solve(eigVector);
-        eigVector = S*y;
-        eigValue = eigVector.dot(h*eigVector)/eigVector.dot(eigVector);
-        eigVector = eigVector/(eigVector.norm());
-        residue = (h*eigVector - eigValue*eigVector).norm(); 
-        //std::cout << eigValue << "    " << residue << std::endl;
-    }
-    struct GroundState gs = {eigValue, eigVector};
-
-    return gs;
-
-}
-*/
-
-
 void Hamiltonian3D::getTheSpectrum(int vector_n, int krylov_n)
-{
-    Spectra::SparseGenMatProd<double, Eigen::RowMajor> op(h);
+{   
+    auto hsinv = h;
+    auto test = Eigen::kroneckerProduct(I, bpMatrInv);
+
+    std::cout << "h" << h.nonZeros() << std::endl;
+    std::cout << "apMatr" << apMatr.nonZeros() << std::endl;
+    std::cout << "bpMatr" << bpMatr.nonZeros() << std::endl;
+    std::cout << "aLaplace" << aLaplace.nonZeros() << std::endl;
+    std::cout << "bLaplace" << bLaplace.nonZeros() << std::endl;
+
+
+    
+    hsinv = Eigen::kroneckerProduct(I, bpMatrInv)*hsinv;
+    hsinv = Eigen::kroneckerProduct(apMatrInv, J)*hsinv;
+    std::cout << "hsinv" << hsinv.nonZeros() << std::endl;
+
+    Spectra::SparseGenMatProd<double, Eigen::RowMajor> op(hsinv);
 
     // Construct eigen solver object, requesting the largest three eigenvalues
     Spectra::GenEigsSolver<Spectra::SparseGenMatProd<double, Eigen::RowMajor>> eigs(op, vector_n, krylov_n);
@@ -266,43 +256,38 @@ void Hamiltonian3D::getTheSpectrum(int vector_n, int krylov_n)
     }
 }
 
-
 CVector Hamiltonian3D::getEigenvalues(){ return evalues; }
+
 RMatrix Hamiltonian3D::getEigenvectors(){ return evectors; }
 
 SparseRMatrix Hamiltonian3D::getPMatr(){ return pMatr; }
+
 SparseRMatrix Hamiltonian3D::getNMatr(){ return nMatr; }
 
 SparseRMatrix Hamiltonian3D::getHamiltonian(){ return h; }
 
-
-SparseRMatrix Hamiltonian3D::getTDHamiltonian(double t, double V)
+SparseCMatrix Hamiltonian3D::getImpulse(double t)
 {
-    double w0 = 0.058;
-    double I0 = 350;
-    double T = 248;
-    double V0 = V;
-    double envArg = (t - 450)/T;
-    int aNMax = aSplines.splineBCdim;
+    double V0 = std::sqrt(I0/3.5095);
+    double envArg = (t + t0)/tau;
+
     int bNMax = bSplines.splineBCdim;
-    int nMax = aNMax * bNMax;
-    SparseRMatrix electricField = SparseRMatrix(nMax, nMax);
-    SparseRMatrix eField = SparseRMatrix(bNMax, bNMax);
+    SparseCMatrix eField = SparseCMatrix(bNMax, bNMax);
     
     eField.reserve(Eigen::VectorXi::Constant(bNMax,bNMax));
-
     double bxi = 0.0;
-    double axi = 0.0;
 
-    double pulse = V0*std::exp(-envArg*envArg)*cos(t);
-    double basisElement = 0.0;
+    double pulse = V0*std::exp(-envArg*envArg)*cos(w0*(t + t0) + phi);
+    
+        std::cout << V0 << " " << pulse << " " << w0 << " " << phi << std::endl;
+
     for(int i=0; i < bNMax; i++){
         bxi = bSplines.space.collocGrid[i];
         for (int j=0; j < bNMax; j++){
-            //std::cout << "bpmatr" << bpMatr.coeff(i, j) << " bxi " << bxi << "pulse " << pulse;
-            eField.insert(i, j) = -(1.0+m[2]/(m[0]+m[1]+m[2]))*bxi*pulse*bpMatr.coeff(i, j);
+            if (bpMatr.coeff(i, j) != 0.0) {
+                eField.insert(i, j) = -(1.0+m[2]/(m[0]+m[1]+m[2]))*bxi*pulse*bpMatr.coeff(i, j);
+            }
         }
-        //std::cout << std::endl;
     }
     eField.makeCompressed();
 
@@ -310,24 +295,24 @@ SparseRMatrix Hamiltonian3D::getTDHamiltonian(double t, double V)
     // std::cout << "bpMatrInv\n" << bpMatrInv << std::endl;
     // std::cout << "bpMatr\n" << bpMatr << std::endl;
 
-    eField = bpMatrInv * eField;
+    //eField = bpMatrInv * eField;
 
     //electricField = Eigen::kroneckerProduct(apMatr, eField);
     // electricField = Eigen::kroneckerProduct(I, bpMatrInv)*electricField;
     // electricField = Eigen::kroneckerProduct(apMatrInv, J)*electricField;
-    electricField = Eigen::kroneckerProduct(I, eField);
+    //electricField = Eigen::kroneckerProduct(I, eField);
     //std::cout << eField << std::endl;
     //
     //std::cout << electricField << std::endl;
     //electricField.makeCompressed();
-    return electricField;
+    return eField;
 }
 
-CVector Hamiltonian3D::evolutionStep(CVector state, int iter, double dt, double V)
+CVector Hamiltonian3D::evolutionStep(CVector state, int iter)
 {
     /*
         We want to calculate this formula:
-        (I - i/2*A)*inv(I + i/2*A) x = c
+        inv(I + i/2*A)*(I - i/2*A) x = c
         decompose it into two steps:
         first step:
         (I - i/2*A) y = c
@@ -345,40 +330,39 @@ CVector Hamiltonian3D::evolutionStep(CVector state, int iter, double dt, double 
     
     y = S*state;
     y = solver.solve(y);
-    
 
-    SparseCMatrix myI = SparseCMatrix(bNMax, bNMax);
-    SparseCMatrix myJ = SparseCMatrix(aNMax, aNMax);
-    myI.setIdentity();
-    myJ.setIdentity();
+    //std::cout << "condition " << t0 + dt*iter << std::endl;
 
-    if (dt*iter < 248.0) {
-        std::cout << "dt " << dt*iter<< ", iter " << iter << std::endl;
+    Eigen::Map<Eigen::MatrixXcd> map(y.data(), bNMax, aNMax); 
+    std::cout << "t " << t0 + dt*iter << ", iter " << iter;
+
+    if (std::abs(t0 + dt*iter) < tau) {
 
         //std::cout << dt*iter << std::endl;
-        auto Vt = getTDHamiltonian(dt*(iter + 0.5), V);
+        auto Vt = getImpulse(dt*(iter + 0.5));
         //std::cout << Vt << std::endl;
-        Eigen::SparseMatrix<std::complex<double>> St = eye - 0.5 * im * Vt.cast<std::complex<double>>();
-        Eigen::SparseMatrix<std::complex<double>> Ft = eye + 0.5 * im * Vt.cast<std::complex<double>>();
+        Eigen::SparseMatrix<std::complex<double>> St = bpMatr.cast<std::complex<double>>() - 0.5 * im * (Vt + W);
+        Eigen::SparseMatrix<std::complex<double>> Ft = bpMatr.cast<std::complex<double>>() + 0.5 * im * (Vt + W);
 
         Eigen::SparseLU<Eigen::SparseMatrix<std::complex<double>>> solverVt;
         // Eigen::SparseMatrix<std::complex<double>> FKt = Eigen::kroneckerProduct(myJ, Ft);
         // Eigen::SparseMatrix<std::complex<double>> SKt = Eigen::kroneckerProduct(myJ, St);
         solverVt.compute(Ft);
 
-        y = St*y;
-        y = solverVt.solve(y);
+        map = St*map;
+        map = solverVt.solve(map);
     }
     
     y = S*y;    
     y = solver.solve(y);
 
+    std::cout << ", norm " << std::sqrt(y.dot(nMatr*y)) << std::endl;
+
     return y;
 }
 
-void Hamiltonian3D::initHamiltonianLU(double dt){
-    double deltat = dt;
-    std::complex<double> im(0.0, deltat);
+void Hamiltonian3D::initHamiltonianLU(){
+    std::complex<double> im(0.0, dt);
 
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
@@ -386,8 +370,40 @@ void Hamiltonian3D::initHamiltonianLU(double dt){
     eye = SparseCMatrix(nMax, nMax);
     eye.setIdentity();
 
-    S = eye - 0.25 * im * h.cast<std::complex<double>>();
-    Eigen::SparseMatrix<std::complex<double>> F = eye + 0.25 * im * h.cast<std::complex<double>>();
+    S = pMatr.cast<std::complex<double>>() - 0.25 * im * h.cast<std::complex<double>>();
+    Eigen::SparseMatrix<std::complex<double>> F = pMatr.cast<std::complex<double>>() + 0.25 * im * h.cast<std::complex<double>>();
 
     solver.compute(F);
+}
+
+void Hamiltonian3D::initImpulse(double init_time, double phase, double intensity, double freq, double duration, double step){
+    w0 = freq;
+    I0 = intensity;
+    phi = phase;
+    tau = duration;
+    t0 = init_time;
+    dt = step;
+}
+
+void Hamiltonian3D::initAbsorption(double alpha, double width){
+    std::complex<double> im(0.0, 1.0/dt);
+    int bNMax = bSplines.splineBCdim;
+    W = SparseCMatrix(bNMax, bNMax);
+    
+    W.reserve(Eigen::VectorXi::Constant(bNMax,bNMax));
+    double bxi = 0.0;
+    double R = bSplines.space.grid[bSplines.space.grid.size()-1];
+
+    //std::cout << R << std::endl;
+    for(int i=0; i < bNMax; i++){
+        bxi = bSplines.space.collocGrid[i];
+        for (int j=0; j < bNMax; j++){
+            //std::cout << "bpmatr" << bpMatr.coeff(i, j) << " bxi " << bxi << "pulse " << pulse;
+            if (bpMatr.coeff(i, j) != 0.0) {
+                W.insert(i, j) = im*std::log(1.0 - std::pow(std::cos(M_PI/2.0*(1.0 - std::abs(bxi)/R)), 50))*bpMatr.coeff(i, j);
+            }
+        }
+    }
+    W.makeCompressed();
+    //std::cout << W << std::endl;
 }

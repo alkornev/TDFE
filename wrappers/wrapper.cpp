@@ -59,12 +59,14 @@ PYBIND11_MODULE(hamiltonian, handle) {
     .def_property_readonly("pMatr", &Hamiltonian3D::getPMatr)
     .def_property_readonly("nMatr", &Hamiltonian3D::getNMatr)
     .def_property_readonly("h", &Hamiltonian3D::getHamiltonian)
-    .def("initLU", &Hamiltonian3D::initHamiltonianLU)
+    .def("init_LU", &Hamiltonian3D::initHamiltonianLU)
+    .def("init_impulse", &Hamiltonian3D::initImpulse)
+    .def("init_absorption", &Hamiltonian3D::initAbsorption)
     .def("get_state", &Hamiltonian3D::getEigenfunction)
     .def("evolutionStep", &Hamiltonian3D::evolutionStep)
     ;
 
-        py::class_<BornOppenheimer2D>(
+    py::class_<BornOppenheimer2D>(
         handle, "PyBornOppenHeimer2D"
     )
     .def(py::init<py::EigenDRef<Eigen::VectorXd>, int, int, std::array<double, 3>, double, double>())

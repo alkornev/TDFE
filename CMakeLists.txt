@@ -27,7 +27,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   # using Visual Studio C++
 endif()
-add_compile_options(-O3 -msse4 -DNDEBUG -qmkl -mavx -mfma -qopenmp)
+add_compile_options(-O3 -msse4 -DNDEBUG -g -std=c++11 -parallel -qmkl -mavx -mfma -qopenmp)
 
 
 pybind11_add_module(hamiltonian SHARED 

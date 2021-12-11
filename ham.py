@@ -55,23 +55,22 @@ class AnimationWF:
         self.h = hamiltonian
 
         self.dt = dt
-        self.V = 20.0
 
     def plot(self, show=False):        
         Z_ampl = np.array([[self.h.get_state(np.real(self.state), xi, yi)**2 + self.h.get_state(np.imag(self.state), xi, yi)**2 for xi in self.xs] for yi in self.ys])
-        cf = self.ax.contourf(self.X, self.Y, Z_ampl, vmin=-0.01, vmax=1.5, cmap=self.cmap, levels=np.arange(-0.01, 1.52, 0.05))
+        cf = self.ax.contourf(self.X, self.Y, Z_ampl, vmin=-0.01, vmax=1.0, cmap=self.cmap, levels=np.arange(-0.01, 1.3, 0.05))
         if show:
             plt.show()
         return cf
 
     def update(self, i):
-        if i % 20 == 0:
+        if i % 50 == 0:
             self.clear()
             self.text = self.fig.text(0.5, 0.04, f'step: {i}, time {self.dt*i:.2f}', ha='center')
 
             cf = self.plot()
             self.cbar = self.fig.colorbar(cf, cax=self.cb_ax)
-        self.state = self.h.evolutionStep(self.state, i, self.dt, self.V)            
+        self.state = self.h.evolutionStep(self.state, i)            
 
     def clear(self):
         for i in range(3):
@@ -99,23 +98,36 @@ def main():
     aRightEnd = 10
     bLeftEnd = -45
     bRightEnd = 45
-    box_shapes = (aLeftEnd, aRightEnd, bLeftEnd, bRightEnd)
+    box_shapes = (aLeftEnd, aRightEnd, -20, 20)
 
-    UnitAGrid = np.linspace(0, 1, 15)
-    UnitBGrid = np.linspace(-1, 1, 45)
+    UnitAGrid = np.linspace(0, 1, 50)
+    UnitBGrid = np.linspace(-1, 1, 50)
 
-    aGrid = aRightEnd*UnitAGrid**3#aRightEnd*np.fromiter(map(lambda x: grid(x), UnitAGrid), dtype=np.float64)
-    bGrid = bRightEnd*UnitBGrid
+    
+    aGrid = aRightEnd*UnitAGrid**2
+    #aRightEnd*np.fromiter(map(lambda x: grid(x), UnitAGrid), dtype=np.float64)
+    bGrid = bRightEnd*UnitBGrid**3
 
 
     begin_time = datetime.datetime.now()
 
     h3 = PyHamiltonian3D(aGrid, bGrid, BC, MASSES, REG, 0)
-    dt = 0.01
-    print(type(dt))
-    h3.initLU(dt)
-    print(h3.pMatr.shape)
-    h3.get_spectrum(1, 50)
+
+    #void initImpulse(double init_time, double init_phase, double intensity, double freq, double duration, double step);
+    t0 = -248.0
+    phase = 0.0
+    I0 = 0.15
+    w0 = 0.058
+    tau = 248.0
+    dt = 0.1
+
+    h3.init_impulse(t0, phase, I0, w0, tau, dt)
+    h3.init_absorption(0, 0)
+    h3.init_LU()
+
+    print(h3.nMatr.shape)
+    
+    h3.get_spectrum(1, 100)
     spectra = h3.get_eigenvalues()
     n = 0
     print(f"ground state: ", spectra)
@@ -124,7 +136,7 @@ def main():
 
     anim = AnimationWF(box_shapes, h3, dt)
     #anim.plot(show=True)
-    anim.animate(n_frames=1000, interval=20)
+    anim.animate(n_frames=4000, interval=10)
 
     print("Elapsed time:", datetime.datetime.now() - begin_time)
     
