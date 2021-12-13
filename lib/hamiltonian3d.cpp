@@ -3,6 +3,7 @@
 #endif
 #include "hamiltonian3d.h"
 #include "s32.h"
+#include "utils.h"
 #include <Eigen/Sparse>
 #include <Eigen/SparseCore>
 #include <Eigen/Dense>
@@ -60,8 +61,8 @@ Hamiltonian3D::Hamiltonian3D(
 
     std::cout << "Collocation Matrix is ready! Continuing..." << std::endl;
     
-    pMatrInv = generateInvPMatr();
-    std::cout << "Inversion of Collocation Matrix is ready! Continuing..." << std::endl;
+    //pMatrInv = generateInvPMatr();
+    //std::cout << "Inversion of Collocation Matrix is ready! Continuing..." << std::endl;
 
     h = generateTheHamiltonian();
     std::cout << "Hamiltonian is ready! Continuing..." << std::endl;
@@ -212,7 +213,7 @@ double Hamiltonian3D::getEigenfunction(
 
 void Hamiltonian3D::getTheSpectrum(int vector_n, int krylov_n)
 {   
-    auto hsinv = h;
+    //auto hsinv = h;
     auto test = Eigen::kroneckerProduct(I, bpMatrInv);
 
     std::cout << "h" << h.nonZeros() << std::endl;
@@ -223,14 +224,16 @@ void Hamiltonian3D::getTheSpectrum(int vector_n, int krylov_n)
 
 
     
-    hsinv = Eigen::kroneckerProduct(I, bpMatrInv)*hsinv;
-    hsinv = Eigen::kroneckerProduct(apMatrInv, J)*hsinv;
-    std::cout << "hsinv" << hsinv.nonZeros() << std::endl;
+    //hsinv = Eigen::kroneckerProduct(I, bpMatrInv)*hsinv;
+    //hsinv = Eigen::kroneckerProduct(apMatrInv, J)*hsinv;
+    //std::cout << "hsinv" << hsinv.nonZeros() << std::endl;
 
-    Spectra::SparseGenMatProd<double, Eigen::RowMajor> op(hsinv);
+    using OpType = Spectra::MySparseGenMatProd<double, Eigen::Sparse, Eigen::Sparse, Eigen::RowMajor, Eigen::RowMajor>;
+
+    OpType op(h, apMatr, bpMatr);
 
     // Construct eigen solver object, requesting the largest three eigenvalues
-    Spectra::GenEigsSolver<Spectra::SparseGenMatProd<double, Eigen::RowMajor>> eigs(op, vector_n, krylov_n);
+    Spectra::GenEigsSolver<OpType> eigs(op, vector_n, krylov_n);
     eigs.init();
 
     int nconv = eigs.compute(Spectra::SortRule::SmallestReal);
@@ -385,7 +388,12 @@ void Hamiltonian3D::initImpulse(double init_time, double phase, double intensity
     dt = step;
 }
 
-void Hamiltonian3D::initAbsorption(double alpha, double width){
+void Hamiltonian3D::initScaling(double vel, double t0){
+    scale_vel = vel;
+    scale_t0 = t0;
+}
+
+void Hamiltonian3D::initAbsorption(int smooth){
     std::complex<double> im(0.0, 1.0/dt);
     int bNMax = bSplines.splineBCdim;
     W = SparseCMatrix(bNMax, bNMax);
@@ -400,10 +408,18 @@ void Hamiltonian3D::initAbsorption(double alpha, double width){
         for (int j=0; j < bNMax; j++){
             //std::cout << "bpmatr" << bpMatr.coeff(i, j) << " bxi " << bxi << "pulse " << pulse;
             if (bpMatr.coeff(i, j) != 0.0) {
-                W.insert(i, j) = im*std::log(1.0 - std::pow(std::cos(M_PI/2.0*(1.0 - std::abs(bxi)/R)), 50))*bpMatr.coeff(i, j);
+                W.insert(i, j) = im*std::log(1.0 - std::pow(std::cos(M_PI/2.0*(1.0 - std::abs(bxi)/R)), smooth))*bpMatr.coeff(i, j);
             }
         }
     }
     W.makeCompressed();
     //std::cout << W << std::endl;
 }
+
+// void scalePotential(double t){
+//     double squaredS = ;
+// }
+
+// void scaleLaplace(double t){
+
+// }

@@ -39,6 +39,9 @@ public:
     double tau;
     double t0;
     double dt;
+
+    double scale_vel;
+    double scale_t0;
     
     std::array<double, 3> m;  
     std::array<double, 3> signs;
@@ -87,8 +90,10 @@ public:
     SparseRMatrix generateTheHamiltonian();
     double getEigenfunction(const Eigen::Ref<const RVector>& coefs, double x, double y);
     void getTheSpectrum(int vector_n, int krylov_n);
+    void getTheSpectrumShiftInvert(int vector_n, int krylov_n);
     void initHamiltonianLU();
-    void initAbsorption(double a, double width);
+    void initScaling(double vel, double t0);
+    void initAbsorption(int smooth);
     void initImpulse(double init_time, double init_phase, double intensity, double freq, double duration, double step);
     CVector getEigenvalues();
     RMatrix getEigenvectors();
@@ -96,6 +101,8 @@ public:
     SparseRMatrix getNMatr();
     SparseRMatrix getHamiltonian();
     SparseCMatrix getImpulse(double t);
+    void scalePotential(double t);
+    void scaleLaplace(double t);
     GroundState getExpGroundState(double err, double dt);
     CVector evolutionStep(CVector state, int iter);
 };

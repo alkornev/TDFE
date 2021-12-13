@@ -1,6 +1,8 @@
 import build.hamiltonian
 from build.hamiltonian import *
 import numpy as np
+import scipy as sp
+import scipy.sparse.linalg
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import datetime
@@ -32,7 +34,7 @@ def grid(x, R=2.0):
 
 
 class AnimationWF:
-    def __init__(self, box_shapes: Tuple[float], hamiltonian, dt):
+    def __init__(self, box_shapes: Tuple[float], hamiltonian, dt, coefs):
         aLeftEnd = box_shapes[0]
         aRightEnd = box_shapes[1]
         bLeftEnd = box_shapes[2]
@@ -49,16 +51,14 @@ class AnimationWF:
         self.cmap = 'RdBu_r'
         plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
 
-
-        coefs = hamiltonian.get_eigenvectors()
-        self.state = coefs[:, 0]
+        self.state = coefs
         self.h = hamiltonian
 
         self.dt = dt
 
     def plot(self, show=False):        
         Z_ampl = np.array([[self.h.get_state(np.real(self.state), xi, yi)**2 + self.h.get_state(np.imag(self.state), xi, yi)**2 for xi in self.xs] for yi in self.ys])
-        cf = self.ax.contourf(self.X, self.Y, Z_ampl, vmin=-0.01, vmax=1.0, cmap=self.cmap, levels=np.arange(-0.01, 1.3, 0.05))
+        cf = self.ax.contourf(self.X, self.Y, Z_ampl, vmin=-0.01, vmax=1., cmap=self.cmap, levels=np.arange(-0.01, 1.3, 0.05))
         if show:
             plt.show()
         return cf
@@ -96,47 +96,54 @@ def main():
     print("max threads: ", get_max_threads())
     aLeftEnd = 0
     aRightEnd = 10
-    bLeftEnd = -45
-    bRightEnd = 45
-    box_shapes = (aLeftEnd, aRightEnd, -20, 20)
+    bLeftEnd = -50
+    bRightEnd = 50
+    box_shapes = (aLeftEnd, aRightEnd, -50, 50)
 
-    UnitAGrid = np.linspace(0, 1, 50)
-    UnitBGrid = np.linspace(-1, 1, 50)
+    UnitAGrid = np.linspace(0, 1, 120)
+    UnitBGrid = np.linspace(-1, 1, 120)
 
     
-    aGrid = aRightEnd*UnitAGrid**2
-    #aRightEnd*np.fromiter(map(lambda x: grid(x), UnitAGrid), dtype=np.float64)
-    bGrid = bRightEnd*UnitBGrid**3
-
+    aGrid = aRightEnd*UnitAGrid#**2
+    #aRightEnd*np.fromiter(mapambda x: grid(x), UnitAGrid), dtype=np.float64)
+    bGrid = bRightEnd*UnitBGrid
 
     begin_time = datetime.datetime.now()
 
     h3 = PyHamiltonian3D(aGrid, bGrid, BC, MASSES, REG, 0)
 
     #void initImpulse(double init_time, double init_phase, double intensity, double freq, double duration, double step);
-    t0 = -248.0
+    t0 = -450.0
     phase = 0.0
-    I0 = 0.15
+    I0 = 0.05
     w0 = 0.058
     tau = 248.0
-    dt = 0.1
+    dt = 0.5
 
     h3.init_impulse(t0, phase, I0, w0, tau, dt)
-    h3.init_absorption(0, 0)
+    h3.init_absorption(200)
     h3.init_LU()
 
     print(h3.nMatr.shape)
-    
-    h3.get_spectrum(1, 100)
+    print(type(h3.h))
+    #vals, vecs = sp.sparse.linalg.eigs(h3.pMatr, 10, h3 which="SI", tol=1E-12)
+    #vals, vecs = sp.sparse.linalg.eig
+    h3.get_spectrum(3, 100)
     spectra = h3.get_eigenvalues()
-    n = 0
-    print(f"ground state: ", spectra)
-    
+    vecs = h3.get_eigenvectors()
+    print("spectra: ", spectra)
+    #n = 0
     print("=="*40)
+    # coefs = vecs[:, 1]
+    # norm = np.sqrt(np.dot(h3.nMatr.dot(coefs), coefs))
 
-    anim = AnimationWF(box_shapes, h3, dt)
+    # coefs = coefs/norm
+    # phase = h3.get_state(coefs, 1.0, 1.0)
+    # coefs = coefs * phase/np.abs(phase)
+
+    anim = AnimationWF(box_shapes, h3, dt, vecs[:, 0])
     #anim.plot(show=True)
-    anim.animate(n_frames=4000, interval=10)
+    anim.animate(n_frames=0, interval=10)
 
     print("Elapsed time:", datetime.datetime.now() - begin_time)
     
