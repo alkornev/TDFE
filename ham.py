@@ -58,7 +58,7 @@ class AnimationWF:
 
     def plot(self, show=False):        
         Z_ampl = np.array([[self.h.get_state(np.real(self.state), xi, yi)**2 + self.h.get_state(np.imag(self.state), xi, yi)**2 for xi in self.xs] for yi in self.ys])
-        cf = self.ax.contourf(self.X, self.Y, Z_ampl, vmin=-0.01, vmax=1., cmap=self.cmap, levels=np.arange(-0.01, 1.3, 0.05))
+        cf = self.ax.contourf(self.X, self.Y, Z_ampl, vmin=-0.01, vmax=1.3, cmap=self.cmap, levels=np.arange(-0.01, 1.3, 0.1))
         if show:
             plt.show()
         return cf
@@ -66,7 +66,7 @@ class AnimationWF:
     def update(self, i):
         if i % 50 == 0:
             self.clear()
-            self.text = self.fig.text(0.5, 0.04, f'step: {i}, time {self.dt*i:.2f}', ha='center')
+            self.text = self.fig.text(0.5, 0.04, f'step: {i}, time {self.dt*i:.2f} fs FWHM', ha='center')
 
             cf = self.plot()
             self.cbar = self.fig.colorbar(cf, cax=self.cb_ax)
@@ -98,41 +98,42 @@ def main():
     aRightEnd = 10
     bLeftEnd = -50
     bRightEnd = 50
-    box_shapes = (aLeftEnd, aRightEnd, -50, 50)
+    box_shapes = (aLeftEnd, aRightEnd, -25, 25)
 
-    UnitAGrid = np.linspace(0, 1, 120)
-    UnitBGrid = np.linspace(-1, 1, 120)
-
+    UnitAGrid = np.linspace(0, 1, 20)
+    UnitBGrid = np.linspace(-1, 1, 20)
+    #calculate with the same time 
     
-    aGrid = aRightEnd*UnitAGrid#**2
+    aGrid = aRightEnd*UnitAGrid**2
     #aRightEnd*np.fromiter(mapambda x: grid(x), UnitAGrid), dtype=np.float64)
-    bGrid = bRightEnd*UnitBGrid
+    bGrid = bRightEnd*UnitBGrid**3
 
     begin_time = datetime.datetime.now()
 
     h3 = PyHamiltonian3D(aGrid, bGrid, BC, MASSES, REG, 0)
 
     #void initImpulse(double init_time, double init_phase, double intensity, double freq, double duration, double step);
-    t0 = -450.0
+    t0 = -300.0
     phase = 0.0
     I0 = 0.05
     w0 = 0.058
     tau = 248.0
-    dt = 0.5
+    dt = 0.1
+
 
     h3.init_impulse(t0, phase, I0, w0, tau, dt)
     h3.init_absorption(200)
-    h3.init_LU()
+    h3.init_scaling(1, 248)
 
     print(h3.nMatr.shape)
     print(type(h3.h))
     #vals, vecs = sp.sparse.linalg.eigs(h3.pMatr, 10, h3 which="SI", tol=1E-12)
     #vals, vecs = sp.sparse.linalg.eig
-    h3.get_spectrum(3, 100)
-    spectra = h3.get_eigenvalues()
+    h3.get_spectrum(5, 300)
+    spectra = [np.real(eig) for eig in h3.get_eigenvalues() if np.imag(eig) == 0.0]
     vecs = h3.get_eigenvectors()
-    print("spectra: ", spectra)
-    #n = 0
+    print("spectra: ", -np.log(spectra)/dt)
+    n = 2
     print("=="*40)
     # coefs = vecs[:, 1]
     # norm = np.sqrt(np.dot(h3.nMatr.dot(coefs), coefs))
@@ -141,9 +142,9 @@ def main():
     # phase = h3.get_state(coefs, 1.0, 1.0)
     # coefs = coefs * phase/np.abs(phase)
 
-    anim = AnimationWF(box_shapes, h3, dt, vecs[:, 0])
+    anim = AnimationWF(box_shapes, h3, dt, vecs[:, n])
     #anim.plot(show=True)
-    anim.animate(n_frames=0, interval=10)
+    anim.animate(n_frames=5000, interval=10)
 
     print("Elapsed time:", datetime.datetime.now() - begin_time)
     

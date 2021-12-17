@@ -62,6 +62,7 @@ PYBIND11_MODULE(hamiltonian, handle) {
     .def("init_LU", &Hamiltonian3D::initHamiltonianLU)
     .def("init_impulse", &Hamiltonian3D::initImpulse)
     .def("init_absorption", &Hamiltonian3D::initAbsorption)
+    .def("init_scaling", &Hamiltonian3D::initScaling)
     .def("get_state", &Hamiltonian3D::getEigenfunction)
     .def("evolutionStep", &Hamiltonian3D::evolutionStep)
     ;

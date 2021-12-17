@@ -113,18 +113,21 @@ SparseRMatrix Hamiltonian3D::generateTheHamiltonian()
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
-    //std::cout << "size of matrix: " << nMax << std::endl;
-    SparseRMatrix ham(nMax, nMax);
-    ham.reserve(Eigen::VectorXi::Constant(nMax,nMax));
-    double potential = 0.0;
 
     double mu = 2.0*m[0]*m[1] / (m[0] + m[1]);
     double mu123 = 2.0*((m[0]+m[1])*m[2])/(m[0] + m[1] + m[2]);
+
+    double potential = 0.0;
+
+    //std::cout << "size of matrix: " << nMax << std::endl;
+    SparseRMatrix ham(nMax, nMax);
+    ham.reserve(Eigen::VectorXi::Constant(nMax, 40));
 
     aLaplace = SparseRMatrix(aNMax, aNMax);
     bLaplace = SparseRMatrix(bNMax, bNMax);
 
     vxy = SparseRMatrix(nMax, nMax);
+    vxy.reserve(Eigen::VectorXi::Constant(nMax, 40));
 
     for(int i = 0; i < aNMax; i++){
         double axi = aSplines.space.collocGrid[i];
@@ -148,7 +151,7 @@ SparseRMatrix Hamiltonian3D::generateTheHamiltonian()
     
     SparseRMatrix laplacian = Eigen::kroneckerProduct(aLaplace, bpMatr) + Eigen::kroneckerProduct(apMatr, bLaplace);
     laplacian.makeCompressed();
-    std::cout << "laplacia non-zeros " << laplacian.nonZeros() << std::endl;
+    std::cout << "laplacian non-zeros " << laplacian.nonZeros() << std::endl;
 
     double basisElement = 0.0;
     for (int i = 0; i < nMax; i++){
@@ -161,14 +164,15 @@ SparseRMatrix Hamiltonian3D::generateTheHamiltonian()
                 potential = signs[0]/sqrt(axi*axi + 0.03) +
                         signs[1]/sqrt((bxi - m[0]*axi/(m[0]+m[1]))*(bxi - m[0]*axi/(m[0]+m[1])) + r) +
                         signs[2]/sqrt((bxi + m[1]*axi/(m[0]+m[1]))*(bxi + m[1]*axi/(m[0]+m[1])) + r);
-                ham.insert(i, j) = 0.5*potential*basisElement;
+                vxy.insert(i, j) = 0.5*potential*basisElement;
             }
         }
     }
-    ham = ham + laplacian;
+    ham = vxy + laplacian;
     //std::cout << "Hamiltonian almost ready!" << std::endl;
     //std::cout << pMatrInv << std::endl;
     //std::cout << ham << std::endl;
+    vxy.makeCompressed();
     ham.makeCompressed();
     //std::cout << ham << std::endl;
 
@@ -228,19 +232,19 @@ void Hamiltonian3D::getTheSpectrum(int vector_n, int krylov_n)
     //hsinv = Eigen::kroneckerProduct(apMatrInv, J)*hsinv;
     //std::cout << "hsinv" << hsinv.nonZeros() << std::endl;
 
-    using OpType = Spectra::MySparseGenMatProd<double, Eigen::Sparse, Eigen::Sparse, Eigen::RowMajor, Eigen::RowMajor>;
+    using OpType = Spectra::ExpSparseGenMatProd<double, Eigen::Sparse, Eigen::Sparse, Eigen::Sparse, 
+    Eigen::RowMajor, Eigen::RowMajor, Eigen::RowMajor>;
 
-    OpType op(h, apMatr, bpMatr);
+    OpType op(h, apMatr, bpMatr, dt);
 
     // Construct eigen solver object, requesting the largest three eigenvalues
     Spectra::GenEigsSolver<OpType> eigs(op, vector_n, krylov_n);
     eigs.init();
 
-    int nconv = eigs.compute(Spectra::SortRule::SmallestReal);
+    int nconv = eigs.compute(Spectra::SortRule::LargestReal);//#SmallestImag);
     
     this->evectors = eigs.eigenvectors().real();
     this->evalues = eigs.eigenvalues();
-
     Eigen::VectorXcd evalues;
     if (eigs.info() == Spectra::CompInfo::Successful){
         evalues = eigs.eigenvalues();
@@ -277,12 +281,12 @@ SparseCMatrix Hamiltonian3D::getImpulse(double t)
     int bNMax = bSplines.splineBCdim;
     SparseCMatrix eField = SparseCMatrix(bNMax, bNMax);
     
-    eField.reserve(Eigen::VectorXi::Constant(bNMax,bNMax));
+    eField.reserve(Eigen::VectorXi::Constant(bNMax,10));
     double bxi = 0.0;
 
     double pulse = V0*std::exp(-envArg*envArg)*cos(w0*(t + t0) + phi);
     
-        std::cout << V0 << " " << pulse << " " << w0 << " " << phi << std::endl;
+        //std::cout << V0 << " " << pulse << " " << w0 << " " << phi << std::endl;
 
     for(int i=0; i < bNMax; i++){
         bxi = bSplines.space.collocGrid[i];
@@ -324,40 +328,68 @@ CVector Hamiltonian3D::evolutionStep(CVector state, int iter)
         second step is equal to the following system:
         (I + i/2*A) y = x
     */
+    using RowCMat = Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+    using ColSpCMat = Eigen::SparseMatrix<std::complex<double>>;
+    using EvolSolver = Eigen::SparseLU<ColSpCMat>;
     int aNMax = aSplines.splineBCdim;
     int bNMax = bSplines.splineBCdim;
     int nMax = aNMax * bNMax;
 
     std::complex<double> im(0.0, dt);
-    CVector y;
-    
-    y = S*state;
-    y = solver.solve(y);
+    CVector y = state;
+
+    Eigen::Map<Eigen::MatrixXcd> map(y.data(), bNMax, aNMax); 
+    Eigen::Map<RowCMat> aMap(y.transpose().data(), aNMax, bNMax); 
+
+    scaleLaplace(dt*(iter + 0.5));
+
+    EvolSolver aKinSolver;
+    EvolSolver bKinSolver;
+
+    ColSpCMat aKinExpl = apMatr.cast<std::complex<double>>() - 0.5 * im * aLaplace;
+    ColSpCMat bKinExpl = bpMatr.cast<std::complex<double>>() - 0.5 * im * bLaplace;
+
+    ColSpCMat aKinImpl = apMatr.cast<std::complex<double>>() + 0.5 * im * aLaplace;
+    ColSpCMat bKinImpl = bpMatr.cast<std::complex<double>>() + 0.5 * im * bLaplace;
+
+    aKinSolver.compute(aKinImpl);
+    bKinSolver.compute(bKinImpl);
+
+    map = map*aKinExpl.transpose();
+    aMap = aKinSolver.solve(aMap.transpose()).transpose();
+
+    map = bKinExpl*map;
+    map = bKinSolver.solve(map);
 
     //std::cout << "condition " << t0 + dt*iter << std::endl;
 
-    Eigen::Map<Eigen::MatrixXcd> map(y.data(), bNMax, aNMax); 
     std::cout << "t " << t0 + dt*iter << ", iter " << iter;
 
     if (std::abs(t0 + dt*iter) < tau) {
 
         //std::cout << dt*iter << std::endl;
         auto Vt = getImpulse(dt*(iter + 0.5));
+        scalePotential(dt*(iter + 0.5));
         //std::cout << Vt << std::endl;
-        Eigen::SparseMatrix<std::complex<double>> St = bpMatr.cast<std::complex<double>>() - 0.5 * im * (Vt + W);
-        Eigen::SparseMatrix<std::complex<double>> Ft = bpMatr.cast<std::complex<double>>() + 0.5 * im * (Vt + W);
+        ColSpCMat St = bpMatr.cast<std::complex<double>>() - 0.5 * im * (Vt + W);
+        ColSpCMat Ft = bpMatr.cast<std::complex<double>>() + 0.5 * im * (Vt + W);
 
-        Eigen::SparseLU<Eigen::SparseMatrix<std::complex<double>>> solverVt;
-        // Eigen::SparseMatrix<std::complex<double>> FKt = Eigen::kroneckerProduct(myJ, Ft);
-        // Eigen::SparseMatrix<std::complex<double>> SKt = Eigen::kroneckerProduct(myJ, St);
-        solverVt.compute(Ft);
+        Eigen::SparseLU<ColSpCMat> solverVt;
+        auto SKt = Eigen::kroneckerProduct(apMatr, St);
+        //SKt = SKt - 0.5 * im * vxy;
+        auto FKt = Eigen::kroneckerProduct(apMatr, Ft);
+        //FKt = FKt + 0.5 * im * vxy;
+        solverVt.compute(FKt);
 
-        map = St*map;
-        map = solverVt.solve(map);
+        y = SKt*y;
+        y = solverVt.solve(y);
     }
     
-    y = S*y;    
-    y = solver.solve(y);
+    map = map*aKinExpl.transpose();
+    aMap = aKinSolver.solve(aMap.transpose()).transpose();
+
+    map = bKinExpl*map;
+    map = bKinSolver.solve(map);
 
     std::cout << ", norm " << std::sqrt(y.dot(nMatr*y)) << std::endl;
 
@@ -383,7 +415,7 @@ void Hamiltonian3D::initImpulse(double init_time, double phase, double intensity
     w0 = freq;
     I0 = intensity;
     phi = phase;
-    tau = duration;
+    tau = duration/(2.41889e-2*1.665109222);
     t0 = init_time;
     dt = step;
 }
@@ -398,7 +430,7 @@ void Hamiltonian3D::initAbsorption(int smooth){
     int bNMax = bSplines.splineBCdim;
     W = SparseCMatrix(bNMax, bNMax);
     
-    W.reserve(Eigen::VectorXi::Constant(bNMax,bNMax));
+    W.reserve(Eigen::VectorXi::Constant(bNMax,10));
     double bxi = 0.0;
     double R = bSplines.space.grid[bSplines.space.grid.size()-1];
 
@@ -416,10 +448,79 @@ void Hamiltonian3D::initAbsorption(int smooth){
     //std::cout << W << std::endl;
 }
 
-// void scalePotential(double t){
-//     double squaredS = ;
-// }
+void Hamiltonian3D::scalePotential(double t){
+    double Ra2;
+    double Ra;
+    
+    double Rb2;
+    double Rb;
+    if (t < scale_t0) {
+        Ra2 = 1.0;
+        Ra = 1.0;
+        
+        Rb2 = 1.0;
+        Rb = 1.0;
+    } else {
+        Ra2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
+        Ra = std::sqrt(std::sqrt(Ra2));
+       
 
-// void scaleLaplace(double t){
+        Rb2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
+        Rb = std::sqrt(std::sqrt(Ra2));
+       
+        int aNMax = aSplines.splineBCdim;
+        int bNMax = bSplines.splineBCdim;
+        int nMax = aNMax * bNMax;
 
-// }
+        double mu = 2.0*m[0]*m[1] / (m[0] + m[1]);
+        double mu123 = 2.0*((m[0]+m[1])*m[2])/(m[0] + m[1] + m[2]);
+
+        double potential = 0.0;
+
+        double basisElement = 0.0;
+        for (int i = 0; i < nMax; i++){
+            //std::cout << "size of matrix: " << i << " " << std::endl;
+            double axi = Ra*aSplines.space.collocGrid[i / bNMax];
+            double bxi = bSplines.space.collocGrid[i % bNMax];
+            for (int j = 0; j < nMax; j++){
+                basisElement = aSplines.fBSplineBC(axi, j / bNMax)*bSplines.fBSplineBC(bxi, j % bNMax);
+                if (basisElement != 0.0){
+                    potential = signs[0]/sqrt(axi*axi + 0.03) +
+                            signs[1]/sqrt((bxi - m[0]*axi/(m[0]+m[1]))*(bxi - m[0]*axi/(m[0]+m[1])) + r) +
+                            signs[2]/sqrt((bxi + m[1]*axi/(m[0]+m[1]))*(bxi + m[1]*axi/(m[0]+m[1])) + r);
+                    vxy.coeffRef(i, j) = 0.5*potential*basisElement;
+                }
+            }
+        }
+    }
+}
+
+void Hamiltonian3D::scaleLaplace(double t){
+    double mu = 2.0*m[0]*m[1] / (m[0] + m[1]);
+    double Ra2;
+    double Ra;
+    double Rapp;
+    double d2Ra;
+    
+    double Rb2;
+    double Rb;
+    double Rbpp;
+    if (t < scale_t0) {
+        Ra2 = 1.0;
+        Ra = 1.0;
+        Rapp = 0.0;
+        
+        Rb2 = 1.0;
+        Rb = 1.0;
+        Rbpp = 0.0;
+    } else {
+        Ra2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
+        Ra = std::sqrt(std::sqrt(Ra2));
+        d2Ra = 3*std::pow(scale_vel, 4)*std::pow(t - scale_t0, 2)/std::pow(Ra, 7);
+        Rapp = 0.5*Ra*mu*d2Ra;
+
+        aLaplace = 1/(Ra*Ra)*aLaplace + Rapp * apMatr.cwiseProduct(apMatr);
+        
+    }
+
+}
