@@ -100,11 +100,11 @@ def main():
     bRightEnd = 50
     box_shapes = (aLeftEnd, aRightEnd, -25, 25)
 
-    UnitAGrid = np.linspace(0, 1, 20)
-    UnitBGrid = np.linspace(-1, 1, 20)
+    UnitAGrid = np.linspace(0, 1, 50)
+    UnitBGrid = np.linspace(-1, 1, 50)
     #calculate with the same time 
     
-    aGrid = aRightEnd*UnitAGrid**2
+    aGrid = aRightEnd*UnitAGrid**3
     #aRightEnd*np.fromiter(mapambda x: grid(x), UnitAGrid), dtype=np.float64)
     bGrid = bRightEnd*UnitBGrid**3
 
@@ -112,39 +112,33 @@ def main():
 
     h3 = PyHamiltonian3D(aGrid, bGrid, BC, MASSES, REG, 0)
 
-    #void initImpulse(double init_time, double init_phase, double intensity, double freq, double duration, double step);
-    t0 = -300.0
+    t0 = -1000.0
     phase = 0.0
     I0 = 0.05
     w0 = 0.058
-    tau = 248.0
-    dt = 0.1
+    tau = 0.0
+    dt = 0.01
 
 
     h3.init_impulse(t0, phase, I0, w0, tau, dt)
     h3.init_absorption(200)
-    h3.init_scaling(1, 248)
+    h3.init_scaling(0.05, 150)
 
     print(h3.nMatr.shape)
     print(type(h3.h))
     #vals, vecs = sp.sparse.linalg.eigs(h3.pMatr, 10, h3 which="SI", tol=1E-12)
     #vals, vecs = sp.sparse.linalg.eig
-    h3.get_spectrum(5, 300)
+    h3.get_spectrum(5, 40)
     spectra = [np.real(eig) for eig in h3.get_eigenvalues() if np.imag(eig) == 0.0]
     vecs = h3.get_eigenvectors()
     print("spectra: ", -np.log(spectra)/dt)
-    n = 2
+    n = 0
     print("=="*40)
-    # coefs = vecs[:, 1]
-    # norm = np.sqrt(np.dot(h3.nMatr.dot(coefs), coefs))
-
-    # coefs = coefs/norm
-    # phase = h3.get_state(coefs, 1.0, 1.0)
-    # coefs = coefs * phase/np.abs(phase)
+    
 
     anim = AnimationWF(box_shapes, h3, dt, vecs[:, n])
     #anim.plot(show=True)
-    anim.animate(n_frames=5000, interval=10)
+    anim.animate(n_frames=200, interval=10)
 
     print("Elapsed time:", datetime.datetime.now() - begin_time)
     

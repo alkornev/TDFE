@@ -30,6 +30,8 @@ PYBIND11_MODULE(hamiltonian, handle) {
     .def("get_spectrum", &Hamiltonian2D::getTheSpectrum)
     .def_property_readonly("pMatr", &Hamiltonian2D::getPMatr)
     .def_property_readonly("nMatr", &Hamiltonian2D::getNMatr)
+    .def_property_readonly("d2Matr",&Hamiltonian2D::getD2Matr)
+    .def_property_readonly("potential",&Hamiltonian2D::getPotential)
     ;
 
     py::class_<CHermiteBC>(

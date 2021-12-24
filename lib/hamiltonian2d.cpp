@@ -17,6 +17,8 @@ Hamiltonian2D::Hamiltonian2D(const Eigen::Ref<const Eigen::VectorXd>& initGrid,
     r = reg;
     nMatr = spl.overlapMatrix;
     pMatr = generatePMatr();
+    potential = generatePotential();
+    d2Matr = generateD2Matr();
     pMatrInv = pMatr.inverse();
     h2 = generateTheHamiltonian();
     //getTheSpectrum();
@@ -43,6 +45,40 @@ Eigen::MatrixXd Hamiltonian2D::getPMatr(){
 
 Eigen::MatrixXd Hamiltonian2D::getNMatr(){
     return nMatr;
+}
+
+Eigen::MatrixXd Hamiltonian2D::getD2Matr(){
+    return d2Matr;
+}
+
+Eigen::MatrixXd Hamiltonian2D::getPotential(){
+    return potential;
+}
+
+Eigen::MatrixXd Hamiltonian2D::generateD2Matr(){
+    int nMax = spl.splineBCdim;
+    Eigen::MatrixXd d2(nMax, nMax);
+    for(int i = 0; i < nMax; i++){
+        double xi = spl.space.collocGrid[i];
+        for(int j=0; j < nMax; j++){
+            d2(i,j)=spl.d2BSplineBC(xi, j);
+        }
+    }
+
+    return d2;
+}
+
+Eigen::MatrixXd Hamiltonian2D::generatePotential(){
+    int nMax = spl.splineBCdim;
+    Eigen::MatrixXd pot(nMax, nMax);
+    for(int i = 0; i < nMax; i++){
+        double xi = spl.space.collocGrid[i];
+        for(int j=0; j < nMax; j++){
+            pot(i,j)= -0.5/sqrt(xi*xi+r)*spl.fBSplineBC(xi, j);
+        }
+    }
+
+    return pot;
 }
 
 Eigen::MatrixXd Hamiltonian2D::generateTheHamiltonian() {

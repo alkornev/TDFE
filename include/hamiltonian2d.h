@@ -13,12 +13,16 @@ public:
     Eigen::MatrixXd h2;
     Eigen::MatrixXd pMatr;
     Eigen::MatrixXd nMatr;
+    Eigen::MatrixXd d2Matr;
+    Eigen::MatrixXd potential;
     Eigen::MatrixXd pMatrInv;
     Eigen::MatrixXd eigVectors;
     Eigen::VectorXd eigVals;
     Hamiltonian2D(const Eigen::Ref<const Eigen::VectorXd>& initGrid, int leftBC, int rightBC, const std::array<double, 2>& masses, double reg);
     ~Hamiltonian2D();
     Eigen::MatrixXd generatePMatr();
+    Eigen::MatrixXd generateD2Matr();
+    Eigen::MatrixXd generatePotential();
     Eigen::MatrixXd generateTheHamiltonian();
     double getEigenfunction(const Eigen::Ref<const Eigen::VectorXd>& coefs, double x);
     void getTheSpectrum();
@@ -26,5 +30,7 @@ public:
     Eigen::MatrixXd getEigenvectors();
     Eigen::MatrixXd getPMatr();
     Eigen::MatrixXd getNMatr();
+    Eigen::MatrixXd getD2Matr();
+    Eigen::MatrixXd getPotential();
 };
 #endif
