@@ -100,8 +100,8 @@ def main():
     bRightEnd = 50
     box_shapes = (aLeftEnd, aRightEnd, -25, 25)
 
-    UnitAGrid = np.linspace(0, 1, 50)
-    UnitBGrid = np.linspace(-1, 1, 50)
+    UnitAGrid = np.linspace(0, 1, 10)
+    UnitBGrid = np.linspace(-1, 1, 10)
     #calculate with the same time 
     
     aGrid = aRightEnd*UnitAGrid**3
@@ -122,13 +122,13 @@ def main():
 
     h3.init_impulse(t0, phase, I0, w0, tau, dt)
     h3.init_absorption(200)
-    h3.init_scaling(0.05, 150)
+    #h3.init_scaling(0.05, 150)
 
     print(h3.nMatr.shape)
     print(type(h3.h))
     #vals, vecs = sp.sparse.linalg.eigs(h3.pMatr, 10, h3 which="SI", tol=1E-12)
     #vals, vecs = sp.sparse.linalg.eig
-    h3.get_spectrum(5, 40)
+    h3.get_spectrum(10, 20)
     spectra = [np.real(eig) for eig in h3.get_eigenvalues() if np.imag(eig) == 0.0]
     vecs = h3.get_eigenvectors()
     print("spectra: ", -np.log(spectra)/dt)
@@ -138,7 +138,7 @@ def main():
 
     anim = AnimationWF(box_shapes, h3, dt, vecs[:, n])
     #anim.plot(show=True)
-    anim.animate(n_frames=200, interval=10)
+    anim.animate(n_frames=100, interval=10)
 
     print("Elapsed time:", datetime.datetime.now() - begin_time)
     

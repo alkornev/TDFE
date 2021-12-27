@@ -61,8 +61,8 @@ Hamiltonian3D::Hamiltonian3D(
 
     std::cout << "Collocation Matrix is ready! Continuing..." << std::endl;
     
-    //pMatrInv = generateInvPMatr();
-    //std::cout << "Inversion of Collocation Matrix is ready! Continuing..." << std::endl;
+    // pMatrInv = generateInvPMatr();
+    // std::cout << "Inversion of Collocation Matrix is ready! Continuing..." << std::endl;
 
     h = generateTheHamiltonian();
     std::cout << "Hamiltonian is ready! Continuing..." << std::endl;
@@ -121,13 +121,13 @@ SparseRMatrix Hamiltonian3D::generateTheHamiltonian()
 
     //std::cout << "size of matrix: " << nMax << std::endl;
     SparseRMatrix ham(nMax, nMax);
-    ham.reserve(Eigen::VectorXi::Constant(nMax, 40));
+    ham.reserve(Eigen::VectorXi::Constant(nMax, 20));
 
     aLaplace = SparseRMatrix(aNMax, aNMax);
     bLaplace = SparseRMatrix(bNMax, bNMax);
 
     vxy = SparseRMatrix(nMax, nMax);
-    vxy.reserve(Eigen::VectorXi::Constant(nMax, 40));
+    vxy.reserve(Eigen::VectorXi::Constant(nMax, 20));
 
     for(int i = 0; i < aNMax; i++){
         double axi = aSplines.space.collocGrid[i];
@@ -160,7 +160,7 @@ SparseRMatrix Hamiltonian3D::generateTheHamiltonian()
         double bxi = bSplines.space.collocGrid[i % bNMax];
         for (int j = 0; j < nMax; j++){
             basisElement = aSplines.fBSplineBC(axi, j / bNMax)*bSplines.fBSplineBC(bxi, j % bNMax);
-            if (basisElement != 0.0){
+            if (std::abs(basisElement) > 1e-17){
                 potential = signs[0]/sqrt(axi*axi + 0.03) +
                         signs[1]/sqrt((bxi - m[0]*axi/(m[0]+m[1]))*(bxi - m[0]*axi/(m[0]+m[1])) + r) +
                         signs[2]/sqrt((bxi + m[1]*axi/(m[0]+m[1]))*(bxi + m[1]*axi/(m[0]+m[1])) + r);
@@ -257,7 +257,7 @@ void Hamiltonian3D::getTheSpectrum(int vector_n, int krylov_n)
     for(int i=0; i<evalues.size(); i++){
         double norm = sqrt(evectors.col(i).dot(nMatr*evectors.col(i)));
         evectors.col(i) /=norm;
-        double phasenorm = getEigenfunction(this->evectors.col(i), 1.0, 1.0);
+        double phasenorm = getEigenfunction(this->evectors.col(i), 1.0, 0.0);
         phasenorm = phasenorm/abs(phasenorm);
         evectors.col(i) /= phasenorm;
     }
@@ -350,38 +350,51 @@ CVector Hamiltonian3D::evolutionStep(CVector state, int iter)
 
 
     std::cout << "t " << t0 + dt*iter << ", iter " << iter;
+    std::cout << ", scale " << scale_t0 << ", norm " << std::sqrt(y.dot(nMatr*y)) << std::endl;
+
 
     //bool p = std::abs(dt*(iter + 0.5) + t0) < tau;
     //std::cout << "HELLLOOO " << dt*iter << std::endl;
     //auto Vt = getImpulse(dt*(iter + 0.5) + t0);
     //scalePotential(dt*(iter + 0.5) + t0);
-    //std::cout << Vt << std::endl;
-    ColSpCMat St = pMatr.cast<std::complex<double>>() - 0.5 * im * (vxy.cast<std::complex<double>>());
-    ColSpCMat Ft = pMatr.cast<std::complex<double>>() + 0.5 * im * (vxy.cast<std::complex<double>>());
+    // std::cout << "imaginary unit: " <<  im << std::endl;
+    // std::cout << "pmatr: " << pMatr.size() << std::endl;
+    // std::cout << "vxy: " << vxy.size() << std::endl;
 
+    eye = SparseCMatrix(nMax, nMax);
+    eye.setIdentity();
+
+    ColSpCMat St = pMatr.cast<std::complex<double>>() - 0.5 * im * vxy.cast<std::complex<double>>();
+    ColSpCMat Ft = pMatr.cast<std::complex<double>>() + 0.5 * im * vxy.cast<std::complex<double>>();
+
+    // std::cout << "St " << St << std::endl;
+    // std::cout << "Ft " << Ft << std::endl;
     Eigen::SparseLU<ColSpCMat> solverVt;
     solverVt.compute(Ft);
-
-    y = St*y;
     y = solverVt.solve(y);
-    
+
+    y = St*y;   
+    std::cout << ",after st norm " << std::sqrt(y.dot(nMatr*y)) << std::endl;
+
+    std::cout << ",after ft norm " << std::sqrt(y.dot(nMatr*y)) << std::endl;
+
+
     map = aKinSolver.adjoint().solve(y.reshaped<Eigen::RowMajor>(aNMax,bNMax)).adjoint();
     map = map*aKinExpl;
-
+        
     map = bKinExpl*map;
     map = bKinSolver.solve(map);
 
-    double Ra2;
-    double Ra;
+    // double Ra2;
+    // double Ra;
 
-    if ((dt*(iter + 0.5) + t0) < scale_t0) {
-        Ra2 = 1.0;
-        Ra = 1.0;    
-    } else {
-        Ra2 = 1.0 + std::pow(scale_vel*(dt*(iter + 0.5) + t0 - scale_t0), 4);
-        Ra = std::sqrt(std::sqrt(Ra2));
-    }
-    std::cout << ", scale " << scale_t0 << " , norm " << std::sqrt(y.dot(nMatr*y)) << std::endl;
+    // if ((dt*(iter + 0.5) + t0) < scale_t0) {
+    //     Ra2 = 1.0;
+    //     Ra = 1.0;    
+    // } else {
+    //     Ra2 = 1.0 + std::pow(scale_vel*(dt*(iter + 0.5) + t0 - scale_t0), 4);
+    //     Ra = std::sqrt(std::sqrt(Ra2));
+    // }
 
     return y;
 }
@@ -439,89 +452,87 @@ void Hamiltonian3D::initAbsorption(int smooth){
     //std::cout << W << std::endl;
 }
 
-void Hamiltonian3D::scalePotential(double t){
-    double Ra2;
-    double Ra;
+// void Hamiltonian3D::scalePotential(double t){
+//     double Ra2;
+//     double Ra;
     
-    double Rb2;
-    double Rb;
-    if (t < scale_t0) {
-        Ra2 = 1.0;
-        Ra = 1.0;
+//     double Rb2;
+//     double Rb;
+//     if (t < scale_t0) {
+//         Ra2 = 1.0;
+//         Ra = 1.0;
         
-        Rb2 = 1.0;
-        Rb = 1.0;
-    } else {
-        Ra2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
-        Ra = std::sqrt(std::sqrt(Ra2));
+//         Rb2 = 1.0;
+//         Rb = 1.0;
+//     } else {
+//         Ra2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
+//         Ra = std::sqrt(std::sqrt(Ra2));
        
 
-        Rb2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
-        Rb = std::sqrt(std::sqrt(Ra2));
+//         Rb2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
+//         Rb = std::sqrt(std::sqrt(Ra2));
        
-        int aNMax = aSplines.splineBCdim;
-        int bNMax = bSplines.splineBCdim;
-        int nMax = aNMax * bNMax;
+//         int aNMax = aSplines.splineBCdim;
+//         int bNMax = bSplines.splineBCdim;
+//         int nMax = aNMax * bNMax;
 
-        double mu = 2.0*m[0]*m[1] / (m[0] + m[1]);
-        double mu123 = 2.0*((m[0]+m[1])*m[2])/(m[0] + m[1] + m[2]);
+//         double mu = 2.0*m[0]*m[1] / (m[0] + m[1]);
+//         double mu123 = 2.0*((m[0]+m[1])*m[2])/(m[0] + m[1] + m[2]);
 
-        double potential = 0.0;
+//         double potential = 0.0;
 
-        double basisElement = 0.0;
-        for (int i = 0; i < nMax; i++){
-            //std::cout << "size of matrix: " << i << " " << std::endl;
-            double axi = Ra*aSplines.space.collocGrid[i / bNMax];
-            double bxi = bSplines.space.collocGrid[i % bNMax];
-            for (int j = 0; j < nMax; j++){
-                basisElement = aSplines.fBSplineBC(axi, j / bNMax)*bSplines.fBSplineBC(bxi, j % bNMax);
-                if (basisElement != 0.0){
-                    potential = signs[0]/sqrt(axi*axi + 0.03) +
-                            signs[1]/sqrt((bxi - m[0]*axi/(m[0]+m[1]))*(bxi - m[0]*axi/(m[0]+m[1])) + r) +
-                            signs[2]/sqrt((bxi + m[1]*axi/(m[0]+m[1]))*(bxi + m[1]*axi/(m[0]+m[1])) + r);
-                    vxy.coeffRef(i, j) = 0.5*potential*basisElement;
-                }
-            }
-        }
-    }
-}
+//         double basisElement = 0.0;
+//         for (int i = 0; i < nMax; i++){
+//             //std::cout << "size of matrix: " << i << " " << std::endl;
+//             double axi = Ra*aSplines.space.collocGrid[i / bNMax];
+//             double bxi = bSplines.space.collocGrid[i % bNMax];
+//             for (int j = 0; j < nMax; j++){
+//                 basisElement = aSplines.fBSplineBC(axi, j / bNMax)*bSplines.fBSplineBC(bxi, j % bNMax);
+//                 if (basisElement > 1e-16){
+//                     potential = signs[0]/sqrt(axi*axi + 0.03) +
+//                             signs[1]/sqrt((bxi - m[0]*axi/(m[0]+m[1]))*(bxi - m[0]*axi/(m[0]+m[1])) + r) +
+//                             signs[2]/sqrt((bxi + m[1]*axi/(m[0]+m[1]))*(bxi + m[1]*axi/(m[0]+m[1])) + r);
+//                     vxy.coeffRef(i, j) = 0.5*potential*basisElement;
+//                 }
+//             }
+//         }
+//     }
+// }
 
-void Hamiltonian3D::scaleLaplace(double t){
-    double mu = m[0]*m[1] / (m[0] + m[1]);
-    double Ra2;
-    double Ra;
-    double Rapp;
-    double d2Ra;
+// void Hamiltonian3D::scaleLaplace(double t){
+//     double mu = m[0]*m[1] / (m[0] + m[1]);
+//     double Ra2;
+//     double Ra;
+//     double Rapp;
+//     double d2Ra;
     
-    double Rb2;
-    double Rb;
-    double Rbpp;
-    if (t < scale_t0) {
-        Ra2 = 1.0;
-        Ra = 1.0;
-        Rapp = 0.0;
+//     double Rb2;
+//     double Rb;
+//     double Rbpp;
+//     if (t < scale_t0) {
+//         Ra2 = 1.0;
+//         Ra = 1.0;
+//         Rapp = 0.0;
         
-        Rb2 = 1.0;
-        Rb = 1.0;
-        Rbpp = 0.0;
-    } else {
-        Ra2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
-        Ra = std::sqrt(std::sqrt(Ra2));
-        d2Ra = 3*std::pow(scale_vel, 4)*std::pow(t - scale_t0, 2)/std::pow(Ra, 7);
-        Rapp = 0.5*Ra*mu*d2Ra;
+//         Rb2 = 1.0;
+//         Rb = 1.0;
+//         Rbpp = 0.0;
+//     } else {
+//         Ra2 = 1.0 + std::pow(scale_vel*(t - scale_t0), 4);
+//         Ra = std::sqrt(std::sqrt(Ra2));
+//         d2Ra = 3*std::pow(scale_vel, 4)*std::pow(t - scale_t0, 2)/std::pow(Ra, 7);
+//         Rapp = 0.5*Ra*mu*d2Ra;
 
-        int aNMax = aSplines.splineBCdim;
-        int bNMax = bSplines.splineBCdim;
-        int nMax = aNMax * bNMax;
+//         int aNMax = aSplines.splineBCdim;
+//         int bNMax = bSplines.splineBCdim;
+//         int nMax = aNMax * bNMax;
 
-        for(int i = 0; i < aNMax; i++){
-            double axi = aSplines.space.collocGrid[i];
-            for(int j = 0; j < aNMax; j++){
-                if (aSplines.d2BSplineBC(axi, j) != 0.0) {
-                    aLaplace.coeffRef(i,j) = 1/(Ra*Ra)*aLaplace.coeff(i,j) + Rapp * axi * axi * apMatr.coeff(i,j);
-                }
-            }
-        }        
-    }
-
-}
+//         for(int i = 0; i < aNMax; i++){
+//             double axi = aSplines.space.collocGrid[i];
+//             for(int j = 0; j < aNMax; j++){
+//                 if (aSplines.d2BSplineBC(axi, j) != 0.0) {
+//                     aLaplace.coeffRef(i,j) = 1/(Ra*Ra)*aLaplace.coeff(i,j) + Rapp * axi * axi * apMatr.coeff(i,j);
+//                 }
+//             }
+//         }        
+//     }

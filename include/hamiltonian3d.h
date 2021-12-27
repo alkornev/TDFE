@@ -13,13 +13,12 @@
 #include <complex>
 
 
-typedef Eigen::VectorXd RVector;
-typedef Eigen::VectorXcd CVector;
-typedef Eigen::MatrixXd RMatrix;
-typedef Eigen::MatrixXcd CMatrix;
-
-typedef Eigen::SparseMatrix<double, Eigen::RowMajor> SparseRMatrix;
-typedef Eigen::SparseMatrix<std::complex<double>, Eigen::RowMajor> SparseCMatrix;
+using RVector = Eigen::VectorXd;
+using CVector = Eigen::VectorXcd;
+using RMatrix = Eigen::MatrixXd;
+using CMatrix = Eigen::MatrixXcd;
+using SparseRMatrix = Eigen::SparseMatrix<double, Eigen::RowMajor>;
+using SparseCMatrix = Eigen::SparseMatrix<std::complex<double>, Eigen::RowMajor>;
 
 
 struct GroundState{
@@ -31,6 +30,7 @@ struct GroundState{
 class Hamiltonian3D
 {
 public:
+
     double r;
     
     double w0;
