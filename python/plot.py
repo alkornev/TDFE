@@ -53,12 +53,12 @@ class AnimationWF:
             vmax=1.3,
             cmap=self.cmap,
             levels=np.arange(-0.01, 1.3, 0.1),
-            extend="max"
+            extend="max",
         )
         if show:
             plt.show()
         return cf
-    
+
     def update(self, i):
         if i % 5 == 0:
             self.clear()

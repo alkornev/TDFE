@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 project(TDSE_Solver VERSION 1.0 DESCRIPTION "TDSE Solver" LANGUAGES CXX)
 
 
-set(INCLUDE_FILES "./include/")
-set(LIBRARY_FILES "./lib/")
-set(WRAPPER_FOLDER "./wrappers")
+set(INCLUDE_FILES "./cpp/include/")
+set(LIBRARY_FILES "./cpp/lib/")
+set(WRAPPER_FOLDER "./cpp/wrappers")
 
 
 #include_directories(${INCLUDE_FILES})

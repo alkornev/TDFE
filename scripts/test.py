@@ -11,7 +11,6 @@ print("initialization...")
 grid = np.linspace(left, right, 200)
 
 
-
 print("cheking phi function...")
 phi_vals = [splines.phi(x, left, center, right) for x in grid]
 phi1_vals = [splines.phi1(x, left, center, right) for x in grid]
@@ -27,7 +26,7 @@ psi2_vals = [splines.psi2(x, left, center, right) for x in grid]
 print("psi is correct!")
 
 
-#plt.figure(1)
+# plt.figure(1)
 plt.plot(grid, phi_vals, grid, phi1_vals, grid, phi2_vals)
 plt.legend(["phi", "1der", "2der"])
 plt.grid(True)
@@ -38,4 +37,3 @@ plt.plot(grid, psi_vals, grid, psi1_vals, grid, psi2_vals)
 plt.legend(["psi", "1der", "2der"])
 plt.grid(True)
 plt.show()
-

@@ -1,4 +1,4 @@
-'''
+"""
 int CHermiteBC::locate(double x)
 {
     Eigen::VectorXd& grid = space.grid;
@@ -16,8 +16,9 @@ int CHermiteBC::locate(double x)
 
     return right;
 }
-'''
+"""
 import numpy as np
+
 
 def binary_search(x: float, grid):
     right = len(grid) - 1
