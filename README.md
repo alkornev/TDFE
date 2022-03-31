@@ -1,5 +1,9 @@
 ### NB
 It is adviced to run notebooks from the root folder of the project.
+
+notebooks/ contains notebooks with experiments.
+python/ contains classes corresponding to schrodinger/faddeev equations.
+
 ### Python setup:
 Create a local venv:
 ```
