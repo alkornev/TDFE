@@ -37,6 +37,9 @@ class Hamiltonian1D3B:
         self.nx = self.spl_x.getSNMatr()
         self.ny = self.spl_y.getSNMatr()
 
+        self.Ix = sp.sparse.eye(self.ident_x.size)
+        self.Iy = sp.sparse.eye(self.ident_y.size)
+
         self.my_sx = np.array(
             [
                 [self.spl_x.fBSplineBC(xi, i) for i in range(self.spl_x.getSpaceDim())]
@@ -187,6 +190,10 @@ class Hamiltonian1D3B:
         
         solve = factorized(backward)
         print('lu')
+        self.xpart = sp.sparse.kron(self.ident_x, self.Iy)
+        self.ypart = sp.sparse.kron(self.Ix, self.ident_y)
+
+        ident_mv = lambda x: self.xpart @ x + self.ypart @ x
         mv = lambda x: solve(forward @ x)
         op = LinearOperator(backward.shape, matvec=mv)
         print(type(backward))

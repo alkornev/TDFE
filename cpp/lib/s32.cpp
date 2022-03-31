@@ -14,7 +14,7 @@
 
 void check_order(double x1i, double xi, double xi1){
     if (x1i > xi || xi > xi1 || x1i > xi1) {
-        throw std::invalid_argument("x1i, xi, xi1 should be in increasing order.");
+        double a = 1.0;   
     }
 }
 
