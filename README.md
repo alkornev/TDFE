@@ -20,7 +20,7 @@ Install necessary dependencies:
 pip install -r requirements.txt
 ```
 ### C++ lib:
-Create build folder inside project:
+Create a build folder inside project:
 ```
 mkdir build && cd build
 ```
@@ -33,7 +33,7 @@ Activate icc environment variables:
 ```
 . /opt/intel/oneapi/setvars.sh
 ```
-Use cmake to compile lib and install it:
+Use cmake to compile lib:
 ```
 cmake -DCMAKE_CXX_COMPILER=icpc .. && make
 ```
