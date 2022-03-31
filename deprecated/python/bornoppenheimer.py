@@ -1,12 +1,11 @@
+import build.hamiltonian
+from build.hamiltonian import *
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
 import datetime
 import math
 
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import cm
-
-import build.hamiltonian
-from build.hamiltonian import *
 
 LEFT_END = 0
 RIGHT_END = 60

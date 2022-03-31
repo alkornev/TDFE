@@ -1,3 +1,5 @@
+### NB
+It is adviced to run notebooks from the root folder of the project.
 ### Python setup:
 Create a local venv:
 ```
